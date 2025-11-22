@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Dentista Pro - Dashboard</title>
+    <style>
+        /* --- Variáveis de Cores Atualizadas para o Layout Pretendido --- */
+        :root {
+            --color-primary: #00BCD4;
+            /* Ciano/Teal */
+            --color-secondary: #FF9800;
+            /* Laranja para Destaque */
+            --color-text-dark: #37474F;
+            /* Cinza Escuro */
+            --color-text-light: #78909C;
+            /* Cinza Claro */
+            --color-success: #4CAF50;
+            /* Verde para Confirmado */
+            --color-warning: #FFC107;
+            /* Amarelo para Pendente */
+            --color-danger: #F44336;
+            /* Vermelho para Cancelar */
+            --color-background: #EFEFEF;
+        }
+
+        /* Base e Mobile First */
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--color-background);
+            padding: 15px;
+            color: var(--color-text-dark);
+        }
+
+        .dashboard-container {
+            max-width: 900px;
+            /* Aumentado para acomodar mais botões e layout mais amplo */
+            margin: 0 auto;
+        }
+
+        /* Cabeçalho e Painel */
+        .header-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            /* Bordas mais arredondadas */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            /* Sombra mais suave */
+            margin-bottom: 25px;
+            border-top: 5px solid var(--color-primary);
+            /* Destaque primário */
+        }
+
+        .header-card h1 {
+            color: var(--color-primary);
+            font-size: 2em;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .calendar-icon {
+            margin-right: 15px;
+            font-size: 1.5em;
+        }
+
+        /* Controles de Agenda (Mês/Semana) */
+        .agenda-controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .agenda-controls h2 {
+            font-size: 1.6em;
+            color: var(--color-text-dark);
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        /* Contêiner de Navegação (Para alinhamento horizontal) */
+        .date-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .date-navigation button {
+            padding: 10px 18px;
+            border: 2px solid var(--color-primary);
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.2s;
+            background-color: white;
+            color: var(--color-primary);
+        }
+
+        .date-navigation button:hover {
+            background-color: var(--color-primary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Botão HOJE tem cor de fundo inicial diferente */
+        .date-navigation .btn-hoje {
+            background-color: var(--color-text-light);
+            color: white;
+            border-color: var(--color-text-light);
+            margin-left: auto;
+            /* Alinha à direita */
+        }
+
+        .date-navigation .btn-hoje:hover {
+            background-color: var(--color-text-dark);
+            border-color: var(--color-text-dark);
+        }
+
+        /* Estilo para o botão ATIVO/SELECIONADO */
+        .date-navigation button[style*="opacity: 1"] {
+            background-color: var(--color-primary) !important;
+            color: white !important;
+            border-color: var(--color-primary) !important;
+        }
+
+        /* Filtro de Data */
+        .filter-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-controls input {
+            padding: 10px;
+            border: 1px solid #c7c7c7;
+            border-radius: 8px;
+            flex-grow: 1;
+            font-size: 1em;
+            color: var(--color-text-dark);
+        }
+
+        .filter-controls #btn-atualizar {
+            background-color: var(--color-secondary);
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .filter-controls #btn-atualizar:hover {
+            background-color: #e68900;
+        }
+
+        /* Detalhes do Dia */
+        #loading-status {
+            text-align: center;
+            color: var(--color-text-light);
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        #cards-container {
+            margin-top: 15px;
+        }
+
+        /* --- Estilo dos Cards (Coração do Layout) --- */
+        .appointment-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            /* Sombra mais forte no card */
+            margin-bottom: 15px;
+            border-left: 8px solid transparent;
+            /* Aumentamos a borda */
+            transition: transform 0.1s;
+        }
+
+        .appointment-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #E0E0E0;
+            padding-bottom: 8px;
+        }
+
+        .horario-nome {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+
+        .card-details {
+            font-size: 1em;
+            color: var(--color-text-dark);
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .card-details a {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .card-details a:hover {
+            text-decoration: underline;
+        }
+
+        /* Área de ações (NOVO: Adicionamos Flex para alinhar botões) */
+        .card-actions {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+            /* Alinha os botões à direita */
+            gap: 10px;
+            /* Espaçamento entre os botões */
+        }
+
+        .card-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilos dos botões adicionais (Confirmar, Reagendar) para simular o layout pretendido */
+        .btn-confirmar {
+            background-color: var(--color-success);
+            color: white;
+        }
+
+        .btn-confirmar:hover {
+            background-color: #388E3C;
+        }
+
+        .btn-reagendar {
+            background-color: var(--color-secondary);
+            color: white;
+        }
+
+        .btn-reagendar:hover {
+            background-color: #E68900;
+        }
+
+        .btn-cancelar {
+            background-color: var(--color-danger);
+            /* Vermelho */
+            color: white;
+        }
+
+        .btn-cancelar:hover {
+            background-color: #D32F2F;
+        }
+
+        /* Badges de Status (Cores das imagens) */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Cores PENDENTE (Amarelo) */
+        .status-pendente {
+            background-color: var(--color-warning);
+            color: var(--color-text-dark);
+        }
+
+        .appointment-card.card-pendente {
+            border-left-color: var(--color-warning);
+            background-color: #FFFDE7;
+        }
+
+        /* Cores CONFIRMADO (Verde) */
+        .status-confirmado {
+            background-color: var(--color-success);
+            color: white;
+        }
+
+        .appointment-card.card-confirmado {
+            border-left-color: var(--color-success);
+            background-color: #E8F5E9;
+        }
+
+        /* Cores CANCELADO */
+        .status-cancelado {
+            background-color: var(--color-danger);
+            color: white;
+        }
+
+        .appointment-card.card-cancelado {
+            border-left-color: var(--color-danger);
+            background-color: #FFEBEE;
+        }
+
+        /* Estilo para Agendamentos Passados */
+        .past-appointment {
+            opacity: 0.7;
+            background-color: #F8F8F8 !important;
+            border-left-color: #a0a0a0 !important;
+        }
+
+        .past-appointment .status-badge {
+            background-color: #E0E0E0 !important;
+            color: #6c757d !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <div class="header-card">
+            <h1><span class="calendar-icon">🦷</span> Painel de Agendamentos</h1>
+        </div>
+
+        <!-- CONTROLES DE FILTRO -->
+        <div class="agenda-controls">
+            <h2 id="mes-atual">Novembro De 2025</h2>
+            <div class="date-navigation">
+                <!-- Botões de navegação agrupados no Flexbox -->
+                <button class="btn-mes" onclick="loadAppointments('month')">Mês</button>
+                <button class="btn-semana" onclick="loadAppointments('week')">Semana</button>
+                <button class="btn-hoje" onclick="loadAppointments('today')">Hoje</button>
+            </div>
+
+            <div class="filter-controls">
+                <input type="date" id="filter-date">
+                <button id="btn-atualizar" onclick="loadAppointments('day')">Atualizar</button>
+            </div>
+        </div>
+
+        <!-- DETALHES E CARDS -->
+        <div class="details-section">
+            <h2 id="detalhes-dia">Detalhes do Dia: Selecione a Data</h2>
+            <p id="loading-status">Use o filtro de data para carregar os agendamentos.</p>
+
+            <div id="cards-container">
+                <!-- Cards de Agendamento serão injetados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Variáveis DOM ---
+        const CARDS_CONTAINER = document.getElementById('cards-container');
+        const LOADING_STATUS = document.getElementById('loading-status');
+        const FILTER_DATE_INPUT = document.getElementById('filter-date');
+        const DETALHES_DIA_HEADER = document.getElementById('detalhes-dia');
+        const MES_ATUAL_HEADER = document.getElementById('mes-atual');
+        const BTN_ATUALIZAR = document.getElementById('btn-atualizar');
+
+        // Define o mês atual no header ao carregar
+        MES_ATUAL_HEADER.innerText = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+
+        // --- Funções de Conversão e Cálculo de Data ---
+
+        // 1. Helper: Converte a string "DD/MM/AAAA" (da planilha) para um objeto Date para comparação
+        function parseDate(dateString) {
+            if (!dateString) return null;
+            const parts = dateString.split('/');
+            // Date constructor: new Date(year, monthIndex, day)
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+
+        // 2. Helper: Retorna a data de hoje no formato ISO (YYYY-MM-DD)
+        function getTodayISODate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 3. Calcula o intervalo de datas da semana atual (Segunda a Domingo)
+        function getWeekRange() {
+            const today = new Date();
+            const day = today.getDay(); // 0 para Domingo, 1 para Segunda, etc.
+            // Calcula a diferença para Segunda-feira (dia = 1). Se for domingo (0), volta 6 dias.
+            const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
+
+            const startOfWeek = new Date(today.getFullYear(), today.getMonth(), diffToMonday);
+            const endOfWeek = new Date(today.getFullYear(), today.getMonth(), diffToMonday + 6);
+
+            // Garante que o intervalo abrange todo o dia
+            startOfWeek.setHours(0, 0, 0, 0);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            return { start: startOfWeek, end: endOfWeek };
+        }
+
+        // 4. Calcula o intervalo de datas do mês atual (Primeiro ao Último dia)
+        function getMonthRange() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            startOfMonth.setHours(0, 0, 0, 0);
+            endOfMonth.setHours(23, 59, 59, 999);
+
+            return { start: startOfMonth, end: endOfMonth };
+        }
+
+        // 5. Formata a data ISO (YYYY-MM-DD) para exibição
+        function formatDisplayDate(dateString) {
+            if (!dateString) return 'Data Não Definida';
+            const parts = dateString.split('-');
+            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+            return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        // --- Função para Cancelamento (Mantida sem alterações na integração) ---
+        async function cancelAppointment(id) {
+            // Utilizamos uma modal customizada em vez de alert/confirm
+            // Para manter a estrutura simples, vou usar o comportamento original com uma nota
+            // IDEALMENTE: Substituir por uma modal de confirmação em HTML/CSS
+            if (!confirm("Tem certeza que deseja CANCELAR este agendamento? O paciente será notificado.")) {
+                return;
+            }
+
+            const cardElement = document.querySelector(`.appointment-card[data-id="${id}"]`);
+            if (cardElement) {
+                const statusBadge = cardElement.querySelector('.status-badge');
+                // Altera temporariamente o status visualmente
+                statusBadge.innerText = 'CANCELANDO...';
+                cardElement.style.opacity = 0.5;
+            }
+
+            try {
+                const response = await fetch('/api/cancelar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id: id }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.ok) {
+                    alert('✅ Agendamento cancelado com sucesso! O paciente foi notificado via WhatsApp.');
+                    loadAppointments(currentFilterType);
+                } else {
+                    alert(`❌ Falha ao cancelar: ${result.error || 'Erro desconhecido'}`);
+                    if (cardElement) cardElement.style.opacity = 1.0;
+                    loadAppointments(currentFilterType);
+                }
+            } catch (error) {
+                console.error('Erro ao chamar API de cancelamento:', error);
+                alert('❌ Erro de comunicação com o servidor ao tentar cancelar.');
+                if (cardElement) cardElement.style.opacity = 1.0;
+                loadAppointments(currentFilterType);
+            }
+        }
+
+
+        // --- Funções de Renderização e Lógica Principal ---
+
+        let currentFilterType = 'today';
+
+        // Função para atualizar o cabeçalho e destacar o botão de filtro
+        function updateHeader(filterType, filterDate = null) {
+            currentFilterType = filterType;
+
+            // Remove o destaque de todos os botões de navegação
+            document.querySelectorAll('.date-navigation button').forEach(btn => btn.style.opacity = 1.0);
+            document.querySelectorAll('.date-navigation button').forEach(btn => btn.removeAttribute('style'));
+
+            let activeBtn = null;
+
+            if (filterType === 'day' && filterDate) {
+                DETALHES_DIA_HEADER.innerText = `Detalhes do Dia: ${formatDisplayDate(filterDate)}`;
+                if (filterDate === getTodayISODate()) {
+                    activeBtn = document.querySelector('.btn-hoje');
+                } else {
+                    // Nenhum dos botões Mês/Semana/Hoje está ativo se for uma data específica
+                }
+            } else if (filterType === 'week') {
+                DETALHES_DIA_HEADER.innerText = `Agendamentos da Semana Atual`;
+                activeBtn = document.querySelector('.btn-semana');
+            } else if (filterType === 'month') {
+                DETALHES_DIA_HEADER.innerText = `Agendamentos do Mês Atual`;
+                activeBtn = document.querySelector('.btn-mes');
+            } else {
+                DETALHES_DIA_HEADER.innerText = `Detalhes do Dia: Filtro de Data Desativado`;
+            }
+
+            // Aplica o destaque ao botão ativo
+            if (activeBtn) {
+                // Remove o estilo para forçar o CSS a usar a regra de background-color para o ativo
+                activeBtn.style.backgroundColor = 'var(--color-primary)';
+                activeBtn.style.color = 'white';
+                activeBtn.style.borderColor = 'var(--color-primary)';
+            }
+        }
+
+        // Função principal para carregar os dados e renderizar os cards
+        async function loadAppointments(filterType = 'day') {
+            let filterDate = FILTER_DATE_INPUT.value;
+            let dateRange = null;
+
+            const TODAY_DATE = new Date();
+            TODAY_DATE.setHours(0, 0, 0, 0);
+
+            const NOW = new Date();
+
+            LOADING_STATUS.innerText = 'Buscando agendamentos...';
+            CARDS_CONTAINER.innerHTML = '';
+
+            // 1. Define o intervalo de data e a visualização do filtro
+            if (filterType === 'today') {
+                filterDate = getTodayISODate();
+                FILTER_DATE_INPUT.value = filterDate;
+                filterType = 'day';
+            }
+
+            if (filterType === 'week') {
+                dateRange = getWeekRange();
+                FILTER_DATE_INPUT.value = '';
+            } else if (filterType === 'month') {
+                dateRange = getMonthRange();
+                FILTER_DATE_INPUT.value = '';
+            } else if (filterType === 'day' && !filterDate) {
+                LOADING_STATUS.innerText = 'Selecione uma data para visualizar os agendamentos.';
+                updateHeader(null);
+                return;
+            }
+
+            try {
+                // 2. Chama a rota que puxa dados do Google Sheets
+                const response = await fetch('/api/agendamentos-planilha');
+                const data = await response.json();
+
+                LOADING_STATUS.innerText = '';
+
+                if (data.error) {
+                    LOADING_STATUS.innerText = `Erro: ${data.error}. Verifique a autenticação e o console.`;
+                    return;
+                }
+
+                // 3. Filtragem dos Dados
+                let filteredData = data;
+
+                if (filterType === 'day') {
+                    const [year, month, day] = filterDate.split('-');
+                    const formattedFilterDate = `${day}/${month}/${year}`;
+                    filteredData = data.filter(item => item.data === formattedFilterDate);
+                } else if (dateRange) {
+                    filteredData = data.filter(item => {
+                        const itemDate = parseDate(item.data);
+                        if (!itemDate) return false;
+                        return itemDate >= dateRange.start && itemDate <= dateRange.end;
+                    });
+                }
+
+                // 4. Atualiza o cabeçalho e verifica se há dados
+                updateHeader(filterType, filterDate);
+
+                if (filteredData.length === 0) {
+                    LOADING_STATUS.innerText = `Nenhum agendamento encontrado para o período selecionado.`;
+                    return;
+                }
+
+                // 5. Ordena por data e horário
+                filteredData.sort((a, b) => {
+                    const dateA = parseDate(a.data);
+                    const dateB = parseDate(b.data);
+                    if (dateA > dateB) return 1;
+                    if (dateA < dateB) return -1;
+                    return (a.horario > b.horario) ? 1 : -1;
+                });
+
+
+                // 6. Renderizar os Cards
+                filteredData.forEach(item => {
+                    const itemDate = parseDate(item.data);
+
+                    // Lógica de Agendamento Passado
+                    let pastClass = '';
+                    let isPast = false;
+
+                    if (itemDate) {
+                        const [day, month, year] = item.data.split('/');
+                        const [hour, minute] = item.horario.split(':');
+                        const appointmentDateTime = new Date(year, month - 1, day, hour, minute);
+
+                        if (appointmentDateTime < NOW) {
+                            pastClass = 'past-appointment';
+                            isPast = true;
+                        }
+                    }
+
+                    const statusLower = item.status ? item.status.toLowerCase() : 'pendente'; // Fallback
+                    const statusClass = `card-${statusLower}`;
+
+                    // Condição para exibir os botões de ação
+                    const showActionButtons = !isPast && (statusLower === 'pendente' || statusLower === 'confirmado');
+
+                    // Tratamento do Telefone para Link do WhatsApp
+                    const cleanPhone = item.telefone ? item.telefone.replace(/\D/g, '') : '';
+                    const whatsappLink = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#'; // Adicionado 55 para DDI Brasil
+
+                    // Para simular o layout pretendido, incluímos Confirmar e Reagendar.
+                    // ATENÇÃO: Estes botões não têm funcionalidade real nesta versão (apenas o Cancelar tem a chamada API que você forneceu).
+                    const actionButtons = showActionButtons ? `
+                        <button class="btn-confirmar">Confirmar</button>
+                        <button class="btn-reagendar">Reagendar</button>
+                        <button class="btn-cancelar" onclick="cancelAppointment('${item.id}')">
+                            Cancelar Agendamento
+                        </button>
+                    ` : '';
+
+
+                    const cardHTML = `
+                    <div class="appointment-card ${statusClass} ${pastClass}" data-id="${item.id}">
+                        <div class="card-header">
+                            <span class="horario-nome">
+                                ${item.horario} - ${item.nome}
+                            </span>
+                            <span class="status-badge status-${statusLower}">
+                                ${item.status ? item.status.toUpperCase() : 'PENDENTE'}
+                            </span>
+                        </div>
+                        <div class="card-details">
+                            ${filterType !== 'day' ? `📅 Data: ${item.data}<br>` : ''}
+                            📲 Telefone: <a href="${whatsappLink}" target="_blank">${item.telefone || 'N/A'}</a><br>
+                            📧 Email: ${item.email || 'N/A'}
+                        </div>
+                        ${showActionButtons ? `
+                        <div class="card-actions">
+                            ${actionButtons}
+                        </div>
+                        ` : ''}
+                    </div>
+                    `;
+                    CARDS_CONTAINER.innerHTML += cardHTML;
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar o dashboard:', error);
+                LOADING_STATUS.innerText = '❌ Erro de comunicação com o servidor. Verifique o console.';
+            }
+        }
+
+
+        // --- Event Listeners dos Botões de Filtro ---
+
+        // Filtro por Data (input)
+        FILTER_DATE_INPUT.addEventListener('change', () => loadAppointments('day'));
+
+        // Botão ATUALIZAR (agora com ID e estilo unificado, e chama a função diretamente no HTML)
+        // BTN_ATUALIZAR.addEventListener('click', () => loadAppointments('day')); // Removido para evitar duplicidade com onclick no HTML
+
+        // Botões de navegação (chama a função diretamente no HTML com onclick)
+
+        // Carrega os agendamentos de 'hoje' ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAppointments('today');
+        });
+    </script>
+</body>
+
+</html>

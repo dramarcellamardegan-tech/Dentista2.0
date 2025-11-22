@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Dra. Marcella</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap'); body{font-family:'Inter',sans-serif;background:#f0f2f5;} .user-bubble{background:#dcf8c6;} .bot-bubble{background:#fff;} #chat-window::-webkit-scrollbar{width:8px;} #chat-window::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}</style>
+  <script>
+    tailwind.config={theme:{extend:{colors:{primary:'#075E54',secondary:'#25D366'}}}};
+  </script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="w-full max-w-md bg-white rounded-lg shadow-2xl flex flex-col h-[85vh] overflow-hidden border border-gray-200">
+
+  <header class="bg-primary text-white p-4 flex items-center rounded-t-lg">
+    <div class="h-10 w-10 bg-secondary rounded-full flex items-center justify-center mr-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold">Assistente Virtual</h1>
+      <p class="text-sm opacity-80">Dra. Marcella</p>
+    </div>
+  </header>
+
+  <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div>
+
+  <div class="p-4 bg-gray-100 border-t border-gray-200">
+    <form id="chat-form" class="flex space-x-2">
+      <input type="text" id="user-input" placeholder="Digite sua mensagem..." autocomplete="off" class="flex-1 p-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-secondary">
+      <button type="submit" id="send-button" class="bg-secondary text-white px-6 py-3 rounded-full hover:bg-green-600 shadow-md font-semibold">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ESTADOS
+let STATE='IDLE';
+
+// DETECÇÃO HUMANIZADA
+function normalize(t){return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s]/g,' ');} 
+
+function detectIntent(text){
+  const n=normalize(text);
+  if(/\b(oi|ola|bom dia|boa tarde|boa noite|tudo bem)\b/.test(n)) return 'greeting';
+  if(/\b(preco|valor|quanto|custa|orçamento|orcamento)\b/.test(n)) return 'price';
+  if(/\b(dor|doendo|inflamado|urgente|sangrando|nao aguento)\b/.test(n)) return 'pain';
+  if(/\b(aparelho|alinhador|invisalign|mordida|ortodont)\b/.test(n)) return 'ortho';
+  if(/\b(clareamento|restaur|lente|limpeza|tartaro|canal|estetica)\b/.test(n)) return 'dent';
+  if(/\b(botox|preenchimento|fio|harmoniza)\b/.test(n)) return 'hof';
+  if(/\b(agendar|consulta|horario|marcar|agenda|disponivel)\b/.test(n)) return 'agendar';
+  if(/\b(cancelar|remarcar|reagendar|desmarcar)\b/.test(n)) return 'desagendar';
+  if(/\b(sim|claro|pode|quero)\b/.test(n)) return 'confirm';
+  if(/\b(nao|depois|outra hora|agora nao)\b/.test(n)) return 'deny';
+  return 'fallback';
+}
+
+// BOTÃO DE AGENDAMENTO
+function agendarButton(){
+  return `
+    <div class="mt-3">
+      <a href="/agendamento.html" target="_blank">
+        <button class="bg-secondary w-full text-white px-5 py-3 rounded-full shadow-lg font-semibold hover:bg-green-600 text-center">📅 AGENDAR AVALIAÇÃO</button>
+      </a>
+    </div>`;
+}
+
+// RESPOSTAS HUMANIZADAS – OPÇÃO B
+function reply(intent){
+  STATE='IDLE';
+  switch(intent){
+    case 'greeting':
+      return 'Olá! 😊 Sou a assistente virtual da Dra. Marcella. Como posso te ajudar hoje?';
+    case 'price':
+      return 'Os valores variam muito conforme o seu caso. A Dra. Marcella sempre avalia pessoalmente antes de passar qualquer orçamento. Para te dar uma orientação segura, preciso te encaminhar para a avaliação. ' + agendarButton();
+    case 'pain':
+      return 'Sinto muito pelo desconforto 😟. A Dra. Marcella sempre prioriza casos com dor. Para te ajudar o mais rápido possível, preciso que você agende uma avaliação. ' + agendarButton();
+    case 'ortho':
+      return 'Casos de alinhamento dental e aparelho precisam de uma avaliação cuidadosa. A Dra. Marcella analisa mordida, posição dos dentes e seu tipo de sorriso antes de indicar qualquer tratamento. Vamos agendar sua avaliação? ' + agendarButton();
+    case 'dent':
+      return 'Tratamentos estéticos como clareamento, restaurações e lentes exigem uma avaliação para garantir naturalidade e segurança. Para ver o seu caso com detalhes, basta agendar sua consulta. ' + agendarButton();
+    case 'hof':
+      return 'A harmonização orofacial é totalmente personalizada. Para avaliar proporção facial, simetria e indicar o melhor procedimento, a Dra. Marcella precisa te ver presencialmente. Vamos agendar? ' + agendarButton();
+    case 'agendar':
+      return 'Perfeito! Podemos seguir com seu agendamento. Basta tocar no botão abaixo para escolher o melhor horário para você. ' + agendarButton();
+    case 'desagendar':
+      return 'Sem problemas! Você pode reagendar ou escolher outro horário no botão abaixo. ' + agendarButton();
+    case 'confirm':
+      return 'Ótimo! É só tocar no botão abaixo para finalizar seu agendamento. ' + agendarButton();
+    case 'deny':
+      return 'Tudo bem! Se precisar de qualquer orientação ou quiser agendar depois, estou aqui para te ajudar 😊';
+    case 'fallback':
+    default:
+      return 'Entendi! Para que a Dra. Marcella possa te orientar corretamente, o primeiro passo é a avaliação presencial. Toque no botão abaixo para escolher seu horário. ' + agendarButton();
+  }
+}
+
+// UI
+function addMessage(text,isUser=false){
+  const win=document.getElementById('chat-window');
+  const b=document.createElement('div');
+  b.className=`max-w-[80%] p-3 rounded-xl shadow-sm whitespace-pre-wrap ${isUser?'user-bubble self-end':'bot-bubble self-start'}`;
+  b.innerHTML=text;
+  const wrap=document.createElement('div');
+  wrap.className=`flex ${isUser?'justify-end':'justify-start'}`;
+  wrap.appendChild(b);
+  win.appendChild(wrap);
+  win.scrollTop=win.scrollHeight;
+}
+
+async function handleSend(e){
+  e.preventDefault();
+  const input=document.getElementById('user-input');
+  const msg=input.value.trim();
+  if(!msg) return;
+  addMessage(msg,true);
+  input.value='';
+  await new Promise(r=>setTimeout(r,400));
+  const intent=detectIntent(msg);
+  const response=reply(intent);
+  addMessage(response,false);
+}
+
+window.onload=function(){
+  document.getElementById('chat-form').addEventListener('submit',handleSend);
+  addMessage('Olá! 😊 Sou a assistente virtual da Dra. Marcella. Como posso te ajudar hoje?',false);
+}
+</script>
+</body>
+</html>

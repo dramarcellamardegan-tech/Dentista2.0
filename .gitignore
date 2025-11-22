@@ -1,0 +1,20 @@
+# Dependências do Node (Arquivos grandes gerados)
+/node_modules
+
+# Arquivos de Configuração Secreta
+.env
+.env.local
+
+# Arquivos de Credenciais Google
+# ESTE É FUNDAMENTAL!
+gcp-service-account.json 
+
+# Arquivos de Sessão e Cache do WhatsApp (não persistem na nuvem)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Arquivos de log e lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json

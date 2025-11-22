@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento Dra. Marcella</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f8ff;
+        }
+
+        .container-card {
+            max-width: 95%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 640px) {
+            .container-card {
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="container-card bg-white p-6 md:p-8 rounded-xl shadow-2xl border-t-8 border-cyan-500">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-extrabold text-gray-800">Agendamento de Avaliação</h1>
+            <p class="text-sm text-gray-500 mt-1">Ortodontia, Dentística e Harmonização Orofacial</p>
+        </header>
+
+        <form id="agendamentoForm" class="space-y-4">
+            <div id="step-info" class="space-y-4">
+                <h2 class="text-xl font-semibold text-cyan-700 border-b pb-2 mb-4">Seus Dados</h2>
+                <div>
+                    <label for="nome" class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                    <input type="text" id="nome" required
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
+                        placeholder="Seu nome">
+                </div>
+                <div>
+                    <label for="telefone" class="block text-sm font-medium text-gray-700">WhatsApp (com DDD)</label>
+                    <input type="tel" id="telefone" required
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
+                        placeholder="Ex: 5511987654321">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" required
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
+                        placeholder="seuemail@exemplo.com">
+                </div>
+                <div class="pt-4">
+                    <button type="button" id="next-to-date-btn"
+                        class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg">Próximo:
+                        Escolher Data</button>
+                </div>
+            </div>
+
+            <div id="step-date" class="hidden space-y-4">
+                <h2 class="text-xl font-semibold text-cyan-700 border-b pb-2 mb-4">Escolha de Data</h2>
+                <div class="flex items-center justify-between">
+                    <button type="button" onclick="changeMonth(-1)"
+                        class="p-2 text-cyan-600 hover:text-cyan-800">←</button>
+                    <span id="month-year" class="text-lg font-semibold text-gray-800"></span>
+                    <button type="button" onclick="changeMonth(1)"
+                        class="p-2 text-cyan-600 hover:text-cyan-800">→</button>
+                </div>
+                <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-sm">
+                    <div class="font-bold text-gray-500">Dom</div>
+                    <div class="font-bold text-gray-500">Seg</div>
+                    <div class="font-bold text-gray-500">Ter</div>
+                    <div class="font-bold text-gray-500">Qua</div>
+                    <div class="font-bold text-gray-500">Qui</div>
+                    <div class="font-bold text-gray-500">Sex</div>
+                    <div class="font-bold text-gray-500">Sáb</div>
+                </div>
+                <div class="pt-4 flex justify-between space-x-2">
+                    <button type="button" onclick="goToStep('info')"
+                        class="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg">Voltar</button>
+                    <button type="button" id="next-to-time-btn" disabled
+                        class="w-2/3 bg-cyan-600 opacity-50 text-white font-bold py-3 px-4 rounded-lg">Escolha um
+                        Dia</button>
+                </div>
+            </div>
+
+            <div id="step-time" class="hidden space-y-4">
+                <h2 class="text-xl font-semibold text-cyan-700 border-b pb-2 mb-4">Horários Disponíveis</h2>
+                <p class="text-sm text-gray-600 mb-4">Dia escolhido: <span id="selected-date-display"
+                        class="font-bold text-cyan-700"></span></p>
+
+                <div id="available-times" class="grid grid-cols-3 gap-3"></div>
+
+                <input type="hidden" id="data_agendamento">
+                <input type="hidden" id="horario">
+
+                <div class="pt-4 flex justify-between space-x-2">
+                    <button type="button" onclick="goToStep('date')"
+                        class="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg">Voltar</button>
+                    <button type="submit" id="submit-btn" disabled
+                        class="w-2/3 bg-green-600 opacity-50 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Confirmar
+                        Agendamento</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="message-area" class="mt-6 p-4 rounded-lg hidden"></div>
+        <div id="loading-indicator" class="mt-6 text-center hidden">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto"></div>
+            <p class="mt-2 text-cyan-600">Carregando...</p>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis de estado
+        let currentDate = new Date();
+        let selectedDate = null;
+        let apiBaseUrl = '/api'; // Certifique-se que o PORT=4000 no .env está ativo
+        const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+        // ==========================================================
+        // Lógica de Fluxo de Passos
+        // ==========================================================
+
+        function goToStep(stepId) {
+            const steps = ['step-info', 'step-date', 'step-time'];
+            steps.forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById(`step-${stepId}`).classList.remove('hidden');
+
+            if (stepId === 'date') {
+                renderCalendar();
+            } else if (stepId === 'time' && selectedDate) {
+                document.getElementById('selected-date-display').textContent = formatDate(selectedDate);
+                fetchAvailability(selectedDate);
+            }
+        }
+
+        // Validação básica do primeiro passo
+        document.getElementById('next-to-date-btn').addEventListener('click', () => {
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+            const email = document.getElementById('email').value.trim();
+
+            // 1. Checa se os campos estão vazios
+            if (!nome || !telefone || !email) {
+                showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
+                return; // <--- IMPEDE O AVANÇO AQUI
+            }
+
+            // 2. Checagem de formato básica
+            if (telefone.replace(/\D/g, '').length < 10) {
+                showMessage('O campo WhatsApp deve conter pelo menos 10 dígitos (DDD + número).', 'error');
+                return; // <--- IMPEDE O AVANÇO AQUI
+            }
+
+            if (!email.includes('@') || email.length < 5) {
+                showMessage('O Email não é válido. Verifique o formato.', 'error');
+                return; // <--- IMPEDE O AVANÇO AQUI
+            }
+
+            // 3. Se tudo estiver certo, avança
+            goToStep('date');
+            showMessage('', ''); // Limpa a mensagem de erro anterior, se houver
+        });
+
+        // ==========================================================
+        // Lógica de Calendário
+        // ==========================================================
+
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            const monthYearEl = document.getElementById('month-year');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            monthYearEl.textContent = `${MESES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+            // Limpa dias anteriores (mantém cabeçalhos)
+            while (calendarEl.children.length > 7) {
+                calendarEl.removeChild(calendarEl.lastChild);
+            }
+
+            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+            // Ajusta o início da semana para começar no domingo (0)
+            let startDay = firstDayOfMonth.getDay();
+
+            // Preenche espaços vazios antes do dia 1
+            for (let i = 0; i < startDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'py-2';
+                calendarEl.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const dayOfWeek = date.getDay(); // 0=Dom, 1=Seg, 3=Qua
+                const isToday = date.getTime() === today.getTime();
+                const isPast = date.getTime() < today.getTime();
+                // 1=Segunda, 3=Quarta
+                const isWorkingDay = [1, 3].includes(dayOfWeek);
+
+                const dayCell = document.createElement('div');
+                dayCell.textContent = day;
+                dayCell.className = 'cursor-pointer py-2 rounded-full font-medium transition duration-150 ease-in-out';
+
+                if (isPast || !isWorkingDay) {
+                    dayCell.className += ' text-gray-300 pointer-events-none';
+                } else {
+                    dayCell.className += ' text-gray-700 hover:bg-cyan-100 hover:text-cyan-700';
+                    dayCell.dataset.date = formatDate(date);
+                    dayCell.dataset.dateObj = date;
+
+                    dayCell.onclick = function () {
+                        selectDay(this, date);
+                    };
+
+                    if (selectedDate && date.getTime() === selectedDate.getTime()) {
+                        dayCell.classList.add('bg-cyan-500', 'text-white', 'hover:bg-cyan-500');
+                    }
+                }
+
+                if (isToday && !isPast && isWorkingDay) {
+                    dayCell.classList.add('border-2', 'border-cyan-500');
+                }
+
+                calendarEl.appendChild(dayCell);
+            }
+        }
+
+        function selectDay(element, dateObj) {
+            // Remove seleção anterior
+            document.querySelectorAll('#calendar > div').forEach(div => {
+                div.classList.remove('bg-cyan-500', 'text-white');
+            });
+
+            // Adiciona nova seleção
+            element.classList.add('bg-cyan-500', 'text-white');
+
+            selectedDate = dateObj;
+            document.getElementById('data_agendamento').value = formatDate(selectedDate);
+
+            // Habilita botão e muda texto
+            const nextBtn = document.getElementById('next-to-time-btn');
+            nextBtn.disabled = false;
+            nextBtn.textContent = `Ver Horários para ${String(selectedDate.getDate()).padStart(2, '0')}/${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+            nextBtn.classList.remove('opacity-50');
+            nextBtn.onclick = () => goToStep('time');
+        }
+
+        // ==========================================================
+        // Lógica de Disponibilidade e API
+        // ==========================================================
+
+        async function fetchAvailability(date) {
+            const timesEl = document.getElementById('available-times');
+            timesEl.innerHTML = '';
+            showLoading(true);
+            showMessage('', '');
+
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+
+            // Novo: Define se a data selecionada é hoje
+            const today = new Date();
+            const isToday = day === today.getDate() && month === (today.getMonth() + 1) && year === today.getFullYear();
+            const currentTimeMinutes = today.getHours() * 60 + today.getMinutes();
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/disponibilidade?dia=${day}&mes=${month}&ano=${year}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let availableTimes = data.disponiveis || [];
+
+                // 🚨 CORREÇÃO AQUI: Filtra horários que já passaram para o dia de hoje
+                if (isToday) {
+                    availableTimes = availableTimes.filter(time => {
+                        const [hour, minute] = time.split(':').map(Number);
+                        const timeInMinutes = hour * 60 + minute;
+
+                        // Adiciona uma margem de segurança de, por exemplo, 5 minutos
+                        return timeInMinutes > currentTimeMinutes + 5;
+                    });
+                }
+
+                if (availableTimes.length > 0) {
+                    availableTimes.forEach(time => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.textContent = time;
+                        btn.className = 'time-slot bg-cyan-100 text-cyan-700 font-medium py-2 rounded-lg hover:bg-cyan-200 transition duration-150 ease-in-out';
+                        btn.dataset.time = time;
+                        btn.onclick = () => selectTime(btn, time);
+                        timesEl.appendChild(btn);
+                    });
+                } else {
+                    timesEl.innerHTML = '<p class="col-span-3 text-center text-gray-500">Nenhum horário disponível neste dia. Tente outra data.</p>';
+                }
+
+            } catch (error) {
+                console.error('Erro ao buscar disponibilidade:', error);
+                showMessage('Houve um erro ao buscar os horários. Tente novamente mais tarde.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function selectTime(element, time) {
+            // Remove seleção anterior
+            document.querySelectorAll('.time-slot').forEach(btn => {
+                btn.classList.remove('bg-cyan-600', 'text-white', 'hover:bg-cyan-700');
+                btn.classList.add('bg-cyan-100', 'text-cyan-700', 'hover:bg-cyan-200');
+            });
+
+            // Adiciona nova seleção
+            element.classList.add('bg-cyan-600', 'text-white', 'hover:bg-cyan-700');
+            element.classList.remove('bg-cyan-100', 'text-cyan-700', 'hover:bg-cyan-200');
+
+            document.getElementById('horario').value = time;
+
+            // Habilita botão de submissão
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50');
+        }
+
+        // ==========================================================
+        // Lógica de Submissão
+        // ==========================================================
+
+        document.getElementById('agendamentoForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = {
+                nome: document.getElementById('nome').value,
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ''), // Limpa o telefone
+                email: document.getElementById('email').value,
+                data_agendamento: document.getElementById('data_agendamento').value,
+                horario: document.getElementById('horario').value,
+            };
+
+            showLoading(true);
+            showMessage('', '');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/agendar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+                const result = await response.json();
+
+                if (result.ok) {
+                    showMessage('✅ Sucesso! Pré-agendamento realizado. Você receberá uma mensagem no WhatsApp para *confirmar* o horário. Fique atento!', 'success');
+                    form.reset(); // Limpa o formulário
+                    goToStep('info'); // Volta para o primeiro passo
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido ao agendar.');
+                }
+            } catch (error) {
+                console.error('Erro de submissão:', error);
+                showMessage(`❌ Falha no agendamento: ${error.message}. Verifique o console do servidor Node.js.`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // ==========================================================
+        // Funções de UI
+        // ==========================================================
+
+        function showMessage(msg, type) {
+            const messageArea = document.getElementById('message-area');
+            messageArea.textContent = msg;
+            messageArea.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+            if (!msg) {
+                messageArea.classList.add('hidden');
+            } else if (type === 'error') {
+                messageArea.classList.add('bg-red-100', 'text-red-700', 'border-l-4', 'border-red-500');
+            } else if (type === 'success') {
+                messageArea.classList.add('bg-green-100', 'text-green-700', 'border-l-4', 'border-green-500');
+            }
+        }
+
+        function showLoading(isLoading) {
+            document.getElementById('loading-indicator').classList.toggle('hidden', !isLoading);
+            document.getElementById('agendamentoForm').classList.toggle('opacity-50', isLoading);
+            document.getElementById('agendamentoForm').classList.toggle('pointer-events-none', isLoading);
+        }
+
+        // Inicia o calendário
+        document.addEventListener('DOMContentLoaded', () => {
+            goToStep('info');
+        });
+    </script>
+
+</body>
+
+</html>

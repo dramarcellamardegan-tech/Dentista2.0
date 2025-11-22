@@ -1,0 +1,29 @@
+{
+  "name": "dentista",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ia.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.11",
+    "@fullcalendar/daygrid": "^6.1.11",
+    "axios": "^1.13.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "fullcalendar": "^6.1.11",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^166.0.0",
+    "nodemailer": "^7.0.10",
+    "qrcode-terminal": "^0.12.0",
+    "uuid": "^13.0.0",
+    "whatsapp-web.js": "^1.34.2"
+  }
+}
