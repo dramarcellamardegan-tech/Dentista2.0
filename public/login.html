@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Agenda Dentista Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Seu CSS aqui --- */
+        :root {
+            --color-primary: #00BCD4;
+            /* Ciano/Teal */
+            --color-secondary: #FF9800;
+            /* Laranja para Destaque */
+            --color-text-dark: #37474F;
+            /* Cinza Escuro */
+            --color-background: #EFEFEF;
+            /* Fundo Claro */
+            --color-danger: #F44336;
+        }
+
+        /* Base e Layout */
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 380px;
+            background-color: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-top: 6px solid var(--color-primary);
+            transition: all 0.3s ease-in-out;
+        }
+
+        .login-container:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Títulos */
+        h1 {
+            color: var(--color-primary);
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        p.subtitle {
+            color: var(--color-text-dark);
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        /* Formulário */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #CFD8DC;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
+            outline: none;
+        }
+
+        /* Botão de Ação */
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--color-secondary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #E68900;
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: #BDBDBD;
+            /* Cinza claro quando desativado */
+            cursor: not-allowed;
+        }
+
+        /* Mensagem de Status/Erro */
+        #message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+            transition: opacity 0.3s;
+        }
+
+        .error {
+            background-color: #FFEBEE;
+            color: var(--color-danger);
+            border: 1px solid var(--color-danger);
+        }
+
+        .success {
+            background-color: #E8F5E9;
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .info {
+            background-color: #E1F5FE;
+            color: #03A9F4;
+            border: 1px solid #03A9F4;
+        }
+
+        /* Responsividade para telas muito pequenas */
+        @media (max-width: 400px) {
+            .login-container {
+                padding: 20px;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <h1>Acesso Exclusivo</h1>
+        <p class="subtitle">Insira suas credenciais para continuar.</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" required placeholder="seu.dentista@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="loginButton" disabled>Acessar Agenda</button>
+
+            <div id="message" role="alert"></div>
+        </form>
+    </div>
+
+    <script type="module">
+        // 🛑 CORREÇÃO CRÍTICA: Importação do SDK Modular
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // Variáveis de Configuração
+        const DASHBOARD_URL = 'dashboard.html';
+
+        // --- SUAS CREDENCIAIS REAIS DO FIREBASE JS SDK ---
+        const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
+
+        // Inicialização do Firebase e Auth (mantenha como está)
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Elementos do DOM
+        const form = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const messageDiv = document.getElementById('message');
+        const loginButton = document.getElementById('loginButton');
+
+
+        /**
+         * Exibe uma mensagem de status na tela (sucesso, erro ou info).
+         */
+        function displayMessage(text, type) {
+            messageDiv.innerText = text;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+        }
+
+        /**
+         * Lida com a tentativa de login usando o Firebase Auth.
+         */
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            // UI Feedback
+            loginButton.disabled = true;
+            loginButton.innerText = 'Autenticando...';
+            messageDiv.style.display = 'none';
+
+            try {
+                // 1. AUTENTICAÇÃO SIMPLES NO FIREBASE
+                displayMessage('Fazendo login...', 'info');
+                await signInWithEmailAndPassword(auth, email, password)
+
+                // 2. SUCESSO!
+                displayMessage('✅ Login bem-sucedido. Redirecionando...', 'success');
+
+                // Redireciona para o dashboard com um pequeno atraso, por segurança
+                setTimeout(() => {
+                    window.location.href = DASHBOARD_URL;
+                }, 1000); // Mantive 1000ms (1s) aqui para você ver a mensagem de sucesso
+
+            } catch (error) {
+                // Erros do Firebase Auth
+                let errorMessage = 'Falha no login. Verifique seu e-mail e senha.';
+
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    errorMessage = '❌ E-mail ou senha incorretos.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = '❌ Formato de e-mail inválido.';
+                } else {
+                    errorMessage = `❌ Erro: ${error.message}`;
+                }
+
+                displayMessage(errorMessage, 'error');
+                console.error("[FIREBASE AUTH ERROR]", error);
+
+            } finally {
+                // Restaura o botão
+                loginButton.disabled = false;
+                loginButton.innerText = 'Acessar Agenda';
+            }
+        } // Fim da função handleLogin
+
+        // Adiciona o listener para o formulário
+        form.addEventListener('submit', handleLogin);
+
+        // Ação CRÍTICA: Verifica se o usuário JÁ está logado ao carregar a página
+        // Não precisamos do document.addEventListener('DOMContentLoaded') aqui.
+        auth.onAuthStateChanged(user => {
+            // O onAuthStateChanged é a forma segura de verificar o estado de sessão do Firebase
+            if (user) {
+                console.log("Usuário já logado. Redirecionando com atraso...");
+                // CRÍTICO: Atrasamos 50ms (para resolver o race condition após o logout)
+                setTimeout(() => {
+                    window.location.href = DASHBOARD_URL;
+                }, 50);
+            } else {
+                // Se não estiver logado, garante que o botão esteja habilitado
+                loginButton.disabled = false;
+            }
+        }); // Fim do auth.onAuthStateChanged
+    </script>
+</body>
+
+</html>

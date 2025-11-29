@@ -25,6 +25,15 @@
                 max-width: 600px;
             }
         }
+
+        /* Estilo para garantir que o select tenha a mesma aparência dos inputs */
+        .select-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22w-4%20h-4%20text-gray-400%22%3E%3Cpath%20d%3D%22M7%2010l5%205%205-5H7z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.25em 1.25em;
+        }
     </style>
 </head>
 
@@ -48,13 +57,27 @@
                     <label for="telefone" class="block text-sm font-medium text-gray-700">WhatsApp (com DDD)</label>
                     <input type="tel" id="telefone" required
                         class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
-                        placeholder="Ex: 5511987654321">
+                        placeholder="Ex: (11)987654321">
                 </div>
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                     <input type="email" id="email" required
                         class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500"
                         placeholder="seuemail@exemplo.com">
+                </div>
+                <div>
+                    <label for="procedimento" class="block text-sm font-medium text-gray-700">Tipo de
+                        Procedimento</label>
+                    <select id="procedimento" required
+                        class="select-input mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-cyan-500 focus:border-cyan-500">
+                        <option value="" disabled selected>Selecione o motivo da avaliação</option>
+                        <option value="Primeira Consulta">Primeira Consulta</option>
+                        <option value="Ortodontia (Aparelho)">Ortodontia (Aparelho)</option>
+                        <option value="Clareamento/Restauração">Clareamento/Restauração (Dentística)</option>
+                        <option value="Lente de Contato Dental">Lente de Contato Dental</option>
+                        <option value="Harmonização Orofacial">Harmonização Orofacial (Botox/Preenchimento)</option>
+                        <option value="Outros">Outros</option>
+                    </select>
                 </div>
                 <div class="pt-4">
                     <button type="button" id="next-to-date-btn"
@@ -146,10 +169,11 @@
             const nome = document.getElementById('nome').value.trim();
             const telefone = document.getElementById('telefone').value.trim();
             const email = document.getElementById('email').value.trim();
+            const procedimento = document.getElementById('procedimento').value; // NOVO CAMPO
 
             // 1. Checa se os campos estão vazios
-            if (!nome || !telefone || !email) {
-                showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
+            if (!nome || !telefone || !email || !procedimento) { // Adicionado procedimento
+                showMessage('Por favor, preencha todos os campos obrigatórios, incluindo o procedimento.', 'error');
                 return; // <--- IMPEDE O AVANÇO AQUI
             }
 
@@ -296,7 +320,7 @@
 
                 let availableTimes = data.disponiveis || [];
 
-                // 🚨 CORREÇÃO AQUI: Filtra horários que já passaram para o dia de hoje
+                // CORREÇÃO AQUI: Filtra horários que já passaram para o dia de hoje
                 if (isToday) {
                     availableTimes = availableTimes.filter(time => {
                         const [hour, minute] = time.split(':').map(Number);
@@ -360,6 +384,7 @@
                 nome: document.getElementById('nome').value,
                 telefone: document.getElementById('telefone').value.replace(/\D/g, ''), // Limpa o telefone
                 email: document.getElementById('email').value,
+                procedimento: document.getElementById('procedimento').value, // NOVO DADO ENVIADO
                 data_agendamento: document.getElementById('data_agendamento').value,
                 horario: document.getElementById('horario').value,
             };

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conexão WhatsApp - Scanner de QR Code</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter como padrão */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            /* Fundo cinza claro */
+            /* 🛑 CORREÇÃO CRÍTICA: Esconde o corpo até que a autenticação seja verificada. */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Estilo para a animação de rotação */
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container" class="w-full max-w-lg p-6 md:p-10 bg-white shadow-2xl rounded-xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900">Conexão WhatsApp</h1>
+            <p id="status-message" class="mt-2 text-gray-600 font-medium transition-all duration-300">
+                Aguardando status inicial do servidor...
+            </p>
+        </header>
+
+        <div id="status-display"
+            class="flex flex-col items-center justify-center p-6 bg-gray-50 border border-gray-200 rounded-lg min-h-60 transition-all duration-500 ease-in-out">
+
+            <div id="loading-indicator" class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                <p class="text-lg text-indigo-600 font-semibold">Iniciando Serviço...</p>
+            </div>
+
+            <div id="qr-code-section" class="hidden flex flex-col items-center">
+                <p class="mb-4 text-center text-gray-700">Escaneie o QR Code com seu celular para conectar.</p>
+                <img id="qr-code-image" src="" alt="QR Code para Conexão WhatsApp"
+                    class="w-64 h-64 border-4 border-indigo-500 rounded-lg shadow-xl"
+                    onerror="this.onerror=null; this.src='https://placehold.co/256x256/f7f7f7/333?text=QR+Code+Indisponível';" />
+                <p class="mt-2 text-sm text-red-500 font-medium">Este código expira rapidamente!</p>
+            </div>
+
+            <div id="connected-section" class="hidden flex flex-col items-center text-center p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-green-500 mb-4" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd" />
+                </svg>
+                <h2 class="text-2xl font-bold text-green-600">Conectado com Sucesso!</h2>
+                <p class="mt-1 text-gray-600">Você pode fechar esta página. A sessão está ativa.</p>
+            </div>
+
+            <div id="error-section" class="hidden flex flex-col items-center text-center p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-500 mb-4" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clip-rule="evenodd" />
+                </svg>
+                <h2 class="text-xl font-bold text-red-600">Conexão Perdida</h2>
+                <p class="mt-1 text-gray-600">Ocorreu um erro ou a sessão expirou. Tentando novamente em breve...</p>
+                <p id="retry-message" class="mt-2 text-sm text-gray-500">Tentativa 0 de 5.</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 🛑 VARIÁVEL DE CONFIGURAÇÃO CRÍTICA
+        const LOGIN_URL = 'loginqrcode.html';
+
+
+
+        // Variáveis globais do ambiente (MANDATÓRIO)
+        const appId = 'default-app-id'; // Pode manter o default
+        const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Elementos da UI
+        const statusMessage = document.getElementById('status-message');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const qrCodeSection = document.getElementById('qr-code-section');
+        const qrCodeImage = document.getElementById('qr-code-image');
+        const connectedSection = document.getElementById('connected-section');
+        const errorSection = document.getElementById('error-section');
+        const retryMessage = document.getElementById('retry-message');
+
+        // Variáveis de controle de Polling e Backoff
+        let isPollingActive = true;
+        let retryCount = 0;
+        const maxRetries = 5;
+        const baseIntervalMs = 3000; // 3 segundos como intervalo base para polling/retry
+
+        let auth;
+        let db;
+        let userId;
+
+        /**
+         * Atualiza a UI com base no status.
+         */
+        function updateUI(status, data, errorDetail = null) {
+            // Esconde todas as seções por padrão
+            loadingIndicator.classList.add('hidden');
+            qrCodeSection.classList.add('hidden');
+            connectedSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+
+            switch (status) {
+                case 'loading':
+                case 'qr_waiting':
+                    statusMessage.textContent = 'Aguardando o QR Code...';
+                    loadingIndicator.classList.remove('hidden');
+                    break;
+                case 'qr_code':
+                    // **PONTO CRÍTICO**: Injeta a string Base64 no atributo src da tag <img>
+                    if (data && data.qrCodeBase64) {
+                        qrCodeImage.src = data.qrCodeBase64;
+                    } else {
+                        qrCodeImage.src = 'https://placehold.co/256x256/f7f7f7/333?text=QR+Code+Indisponível';
+                    }
+                    statusMessage.textContent = 'Por favor, escaneie o código abaixo.';
+                    qrCodeSection.classList.remove('hidden');
+                    retryCount = 0; // Resetar retries após sucesso na comunicação
+                    break;
+                case 'connected':
+                    statusMessage.textContent = 'Conexão estabelecida com sucesso!';
+                    connectedSection.classList.remove('hidden');
+                    isPollingActive = false; // Parar polling
+                    break;
+                case 'error':
+                case 'disconnected':
+                    statusMessage.textContent = 'Ocorreu um erro ou a sessão expirou.';
+                    errorSection.classList.remove('hidden');
+
+                    if (errorDetail) {
+                        console.error("Detalhes do Erro:", errorDetail);
+                    }
+                    break;
+                default:
+                    statusMessage.textContent = 'Status desconhecido: ' + status;
+                    errorSection.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Faz a chamada real à API do backend para verificar o status de conexão.
+         */
+        async function checkConnectionStatus() {
+            if (!isPollingActive) {
+                return;
+            }
+
+            // Endpoint real
+            const apiEndpoint = `/api/whatsapp/status?userId=${userId}`;
+
+            try {
+                // Notifica que estamos checando, se não estiver já no estado QR Code ou Connected
+                if (qrCodeSection.classList.contains('hidden') && connectedSection.classList.contains('hidden')) {
+                    statusMessage.textContent = 'Verificando status de conexão...';
+                    loadingIndicator.classList.remove('hidden');
+                }
+
+                const response = await fetch(apiEndpoint, { method: 'GET' });
+
+                if (!response.ok) {
+                    // Lidar com status HTTP que indicam falha (ex: 404, 500)
+                    throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
+                }
+
+                const apiResponse = await response.json();
+
+                // O backend deve retornar o status de forma limpa (qr_code, connected, etc.)
+                const status = apiResponse.status || 'error';
+                const qrData = apiResponse;
+
+                updateUI(status, qrData);
+
+                // Se o status final (connected, disconnected, error) não foi alcançado,
+                // continuar o polling após um intervalo fixo.
+                if (status !== 'connected' && status !== 'disconnected') {
+                    // Intervalo normal de polling
+                    setTimeout(checkConnectionStatus, baseIntervalMs);
+                }
+
+            } catch (error) {
+                console.error("Erro ao verificar status da API:", error);
+
+                // Lógica de Exponential Backoff
+                if (retryCount < maxRetries) {
+                    retryCount++;
+
+                    // Calcular tempo de espera exponencialmente
+                    const delay = baseIntervalMs * Math.pow(2, retryCount - 1);
+
+                    updateUI('error', null, error.message);
+                    retryMessage.textContent = `Tentativa ${retryCount} de ${maxRetries}. Próxima em ${Math.round(delay / 1000)}s.`;
+
+                    // Agendar a próxima tentativa
+                    setTimeout(checkConnectionStatus, delay);
+                } else {
+                    // Retries esgotados. Parar o polling e mostrar erro final.
+                    isPollingActive = false;
+                    updateUI('disconnected', null, "Máximo de tentativas de conexão esgotado. Verifique o servidor.");
+                    retryMessage.textContent = 'Não foi possível reconectar. Por favor, atualize a página.';
+                }
+            }
+        }
+
+        /**
+         * Inicializa o Firebase e começa o processo de autenticação.
+         */
+        async function initApp() {
+            try {
+
+
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                updateUI('loading'); // Começar mostrando o loading
+
+                // Autenticação com o token ou anónima
+                const performAuth = async () => {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        // Não force signInAnonymously se for uma rota protegida por login/senha,
+                        // pois a sessão já deve existir se o loginqrcode.html foi usado.
+                        // Manter o onAuthStateChanged é suficiente para pegar a sessão existente.
+                    }
+                };
+
+                // Executa a autenticação se houver um token personalizado
+                if (initialAuthToken) {
+                    await performAuth();
+                }
+
+                // 🛑 CORREÇÃO CRÍTICA: Lógica de Proteção de Rota
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // ✅ Usuário autenticado
+                        userId = user.uid;
+                        console.log("Usuário autenticado:", userId);
+
+                        // 🟢 EXIBE O CORPO AGORA QUE ESTÁ LOGADO
+                        document.body.style.display = 'flex';
+
+                        // Inicia o processo de polling após a autenticação
+                        checkConnectionStatus();
+                    } else {
+                        // ❌ Usuário NÃO autenticado
+                        console.error("Acesso negado. Redirecionando para login.");
+
+                        // 🛑 REDIRECIONAMENTO DE SEGURANÇA
+                        window.location.href = LOGIN_URL;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro na inicialização do Firebase ou Auth:", error);
+
+                // 🛑 CORREÇÃO CONTRA TELA BRANCA:
+                // Se a inicialização falhar (devido a JSON inválido ou config incorreta),
+                // forçamos a exibição para mostrar a UI de erro.
+                document.body.style.display = 'flex';
+
+                updateUI('error', null, error.message);
+            }
+        }
+
+        // Inicia a aplicação quando a janela carregar
+        initApp();
+
+    </script>
+</body>
+
+</html>

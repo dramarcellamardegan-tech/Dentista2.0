@@ -5,6 +5,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agenda Dentista Pro - Dashboard</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <script>
+        // Variáveis de Redirecionamento e API
+        const LOGIN_URL = 'login.html';
+        const API_BASE_URL = window.location.origin;
+
+        // --- SUAS CREDENCIAIS REAIS DO FIREBASE JS SDK ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmkW8PIn44oUvpW5n-JnaIqrME1lpeZwE",
+            authDomain: "agendamento-com-chatbot.firebaseapp.com",
+            projectId: "agendamento-com-chatbot",
+            storageBucket: "agendamento-com-chatbot.firebasestorage.app",
+            messagingSenderId: "579255967956",
+            appId: "1:579255967956:web:8dda8b717a82f837169b41",
+            measurementId: "G-DXCZ18JKJ5"
+        };
+
+        // Inicializa o Firebase e a Autenticação
+        firebase.initializeApp(firebaseConfig);
+
+        // CORREÇÃO CRÍTICA: Inicializa a instância de autenticação ANTES de usá-la.
+        const auth = firebase.auth();
+
+
+        // CRÍTICO: Ouve o estado da autenticação para PROTEGER o acesso.
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                // Se o usuário NÃO estiver logado, redireciona IMEDIATAMENTE.
+                console.log("Acesso negado. Redirecionando para login.");
+                window.location.href = LOGIN_URL;
+            } else {
+                // O usuário está logado. Permite que o restante do dashboard seja carregado.
+                console.log("Usuário autenticado:", user.email);
+
+                // Exibe o conteúdo do corpo
+                document.body.style.display = 'block';
+
+                // Você pode atualizar o nome do usuário/e-mail no dashboard
+                const userInfo = document.getElementById('user-info');
+                if (userInfo) {
+                    userInfo.innerText = `Olá, ${user.email.split('@')[0]}!`;
+                }
+            }
+        });
+
+        // Define a função global de LOGOUT (com o fix do race condition)
+        function logout() {
+            auth.signOut().then(() => {
+                console.log("Logout bem-sucedido. Redirecionando com atraso.");
+                // ESTE ATRASO É FUNDAMENTAL: Fixa o problema do loop.
+                setTimeout(() => {
+                    window.location.href = LOGIN_URL;
+                }, 50);
+            }).catch(error => {
+                console.error("Erro ao fazer logout:", error);
+                setTimeout(() => {
+                    window.location.href = LOGIN_URL; // Redireciona mesmo em caso de erro.
+                }, 50);
+            });
+        }
+        // Torna a função acessível ao botão 'onclick' no HTML
+        window.logout = logout;
+
+    </script>
+
+
     <style>
         /* --- Variáveis de Cores Atualizadas para o Layout Pretendido --- */
         :root {
@@ -31,11 +100,12 @@
             background-color: var(--color-background);
             padding: 15px;
             color: var(--color-text-dark);
+            /* O corpo inicia oculto e é exibido após a autenticação */
+            display: none;
         }
 
         .dashboard-container {
             max-width: 900px;
-            /* Aumentado para acomodar mais botões e layout mais amplo */
             margin: 0 auto;
         }
 
@@ -44,12 +114,16 @@
             background-color: white;
             padding: 20px;
             border-radius: 12px;
-            /* Bordas mais arredondadas */
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            /* Sombra mais suave */
             margin-bottom: 25px;
             border-top: 5px solid var(--color-primary);
-            /* Destaque primário */
+        }
+
+        /* Flexbox para alinhar Título e Status */
+        .header-card .header-main-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .header-card h1 {
@@ -64,6 +138,67 @@
         .calendar-icon {
             margin-right: 15px;
             font-size: 1.5em;
+        }
+
+        /* --- Estilo para o Status do WhatsApp --- */
+        .whatsapp-status-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        /* Status: Conectado (Verde) */
+        .whatsapp-status-badge.status-connected {
+            background-color: var(--color-success);
+            color: white;
+        }
+
+        .whatsapp-status-badge.status-connected:hover {
+            background-color: #388E3C;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Status: Desconectado / QR Code (Vermelho) */
+        .whatsapp-status-badge.status-disconnected {
+            background-color: var(--color-danger);
+            color: white;
+            animation: pulse-red 1.5s infinite;
+        }
+
+        .whatsapp-status-badge.status-disconnected:hover {
+            background-color: #D32F2F;
+            animation: none;
+        }
+
+        /* Status: Carregando (Amarelo/Cinzento) */
+        .whatsapp-status-badge.status-loading {
+            background-color: var(--color-warning);
+            color: var(--color-text-dark);
+        }
+
+        /* Animação para o status Desconectado/QR Code */
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+            }
         }
 
         /* Controles de Agenda (Mês/Semana) */
@@ -83,7 +218,7 @@
             margin-bottom: 15px;
         }
 
-        /* Contêiner de Navegação (Para alinhamento horizontal) */
+        /* Contêiner de Navegação */
         .date-navigation {
             display: flex;
             gap: 10px;
@@ -107,13 +242,11 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* Botão HOJE tem cor de fundo inicial diferente */
         .date-navigation .btn-hoje {
             background-color: var(--color-text-light);
             color: white;
             border-color: var(--color-text-light);
             margin-left: auto;
-            /* Alinha à direita */
         }
 
         .date-navigation .btn-hoje:hover {
@@ -121,8 +254,7 @@
             border-color: var(--color-text-dark);
         }
 
-        /* Estilo para o botão ATIVO/SELECIONADO */
-        .date-navigation button[style*="opacity: 1"] {
+        .date-navigation button[style*="background-color: var(--color-primary)"] {
             background-color: var(--color-primary) !important;
             color: white !important;
             border-color: var(--color-primary) !important;
@@ -160,6 +292,25 @@
             background-color: #e68900;
         }
 
+        /* --- Estilo para o Botão SAIR --- */
+        .btn-sair {
+            padding: 10px 18px;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            background-color: var(--color-danger);
+            /* Vermelho (F44336) */
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-sair:hover {
+            background-color: #D32F2F;
+            /* Vermelho mais escuro */
+        }
+
         /* Detalhes do Dia */
         #loading-status {
             text-align: center;
@@ -172,16 +323,14 @@
             margin-top: 15px;
         }
 
-        /* --- Estilo dos Cards (Coração do Layout) --- */
+        /* --- Estilo dos Cards --- */
         .appointment-card {
             background-color: white;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            /* Sombra mais forte no card */
             margin-bottom: 15px;
             border-left: 8px solid transparent;
-            /* Aumentamos a borda */
             transition: transform 0.1s;
         }
 
@@ -222,14 +371,12 @@
             text-decoration: underline;
         }
 
-        /* Área de ações (NOVO: Adicionamos Flex para alinhar botões) */
+        /* Área de ações */
         .card-actions {
             margin-top: 15px;
             display: flex;
             justify-content: flex-end;
-            /* Alinha os botões à direita */
             gap: 10px;
-            /* Espaçamento entre os botões */
         }
 
         .card-actions button {
@@ -243,28 +390,8 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* Estilos dos botões adicionais (Confirmar, Reagendar) para simular o layout pretendido */
-        .btn-confirmar {
-            background-color: var(--color-success);
-            color: white;
-        }
-
-        .btn-confirmar:hover {
-            background-color: #388E3C;
-        }
-
-        .btn-reagendar {
-            background-color: var(--color-secondary);
-            color: white;
-        }
-
-        .btn-reagendar:hover {
-            background-color: #E68900;
-        }
-
         .btn-cancelar {
             background-color: var(--color-danger);
-            /* Vermelho */
             color: white;
         }
 
@@ -272,7 +399,7 @@
             background-color: #D32F2F;
         }
 
-        /* Badges de Status (Cores das imagens) */
+        /* Badges de Status */
         .status-badge {
             padding: 5px 10px;
             border-radius: 16px;
@@ -282,7 +409,6 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        /* Cores PENDENTE (Amarelo) */
         .status-pendente {
             background-color: var(--color-warning);
             color: var(--color-text-dark);
@@ -293,7 +419,6 @@
             background-color: #FFFDE7;
         }
 
-        /* Cores CONFIRMADO (Verde) */
         .status-confirmado {
             background-color: var(--color-success);
             color: white;
@@ -304,7 +429,6 @@
             background-color: #E8F5E9;
         }
 
-        /* Cores CANCELADO */
         .status-cancelado {
             background-color: var(--color-danger);
             color: white;
@@ -315,7 +439,6 @@
             background-color: #FFEBEE;
         }
 
-        /* Estilo para Agendamentos Passados */
         .past-appointment {
             opacity: 0.7;
             background-color: #F8F8F8 !important;
@@ -326,21 +449,38 @@
             background-color: #E0E0E0 !important;
             color: #6c757d !important;
         }
+
+        @media (max-width: 600px) {
+            .header-card .header-main-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .whatsapp-status-badge {
+                margin-top: 10px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="dashboard-container">
-        <!-- HEADER -->
         <div class="header-card">
-            <h1><span class="calendar-icon">🦷</span> Painel de Agendamentos</h1>
+            <div class="header-main-content">
+                <h1><span class="calendar-icon">🦷</span> Painel de Agendamentos</h1>
+                <div class="flex items-center space-x-4">
+                    <span id="user-info" class="text-sm font-medium text-[#37474F]">Olá, Dra!</span>
+                    <button onclick="logout()" class="btn-sair">
+                        Sair
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- CONTROLES DE FILTRO -->
         <div class="agenda-controls">
-            <h2 id="mes-atual">Novembro De 2025</h2>
+            <h2 id="mes-atual"></h2>
             <div class="date-navigation">
-                <!-- Botões de navegação agrupados no Flexbox -->
                 <button class="btn-mes" onclick="loadAppointments('month')">Mês</button>
                 <button class="btn-semana" onclick="loadAppointments('week')">Semana</button>
                 <button class="btn-hoje" onclick="loadAppointments('today')">Hoje</button>
@@ -352,17 +492,14 @@
             </div>
         </div>
 
-        <!-- DETALHES E CARDS -->
         <div class="details-section">
             <h2 id="detalhes-dia">Detalhes do Dia: Selecione a Data</h2>
             <p id="loading-status">Use o filtro de data para carregar os agendamentos.</p>
 
             <div id="cards-container">
-                <!-- Cards de Agendamento serão injetados aqui -->
             </div>
         </div>
     </div>
-
     <script>
         // --- Variáveis DOM ---
         const CARDS_CONTAINER = document.getElementById('cards-container');
@@ -372,20 +509,20 @@
         const MES_ATUAL_HEADER = document.getElementById('mes-atual');
         const BTN_ATUALIZAR = document.getElementById('btn-atualizar');
 
-        // Define o mês atual no header ao carregar
-        MES_ATUAL_HEADER.innerText = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+        // --- Variáveis do WhatsApp Status (Definidas para evitar ReferenceError) ---
+        const WHATSAPP_STATUS_LINK = document.getElementById('whatsapp-status-link'); // Certifique-se que este ID existe no HTML
+        const WHATSAPP_STATUS_TEXT = document.getElementById('status-text'); // Certifique-se que este ID existe no HTML
+        const WHATSAPP_STATUS_ICON = document.getElementById('status-icon'); // Certifique-se que este ID existe no HTML
+        const POLLING_INTERVAL = 5000;
+
 
         // --- Funções de Conversão e Cálculo de Data ---
-
-        // 1. Helper: Converte a string "DD/MM/AAAA" (da planilha) para um objeto Date para comparação
         function parseDate(dateString) {
             if (!dateString) return null;
             const parts = dateString.split('/');
-            // Date constructor: new Date(year, monthIndex, day)
             return new Date(parts[2], parts[1] - 1, parts[0]);
         }
 
-        // 2. Helper: Retorna a data de hoje no formato ISO (YYYY-MM-DD)
         function getTodayISODate() {
             const today = new Date();
             const year = today.getFullYear();
@@ -394,36 +531,26 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 3. Calcula o intervalo de datas da semana atual (Segunda a Domingo)
         function getWeekRange() {
             const today = new Date();
-            const day = today.getDay(); // 0 para Domingo, 1 para Segunda, etc.
-            // Calcula a diferença para Segunda-feira (dia = 1). Se for domingo (0), volta 6 dias.
+            const day = today.getDay();
             const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
-
             const startOfWeek = new Date(today.getFullYear(), today.getMonth(), diffToMonday);
             const endOfWeek = new Date(today.getFullYear(), today.getMonth(), diffToMonday + 6);
-
-            // Garante que o intervalo abrange todo o dia
             startOfWeek.setHours(0, 0, 0, 0);
             endOfWeek.setHours(23, 59, 59, 999);
-
             return { start: startOfWeek, end: endOfWeek };
         }
 
-        // 4. Calcula o intervalo de datas do mês atual (Primeiro ao Último dia)
         function getMonthRange() {
             const today = new Date();
             const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
             startOfMonth.setHours(0, 0, 0, 0);
             endOfMonth.setHours(23, 59, 59, 999);
-
             return { start: startOfMonth, end: endOfMonth };
         }
 
-        // 5. Formata a data ISO (YYYY-MM-DD) para exibição
         function formatDisplayDate(dateString) {
             if (!dateString) return 'Data Não Definida';
             const parts = dateString.split('-');
@@ -431,19 +558,15 @@
             return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
         }
 
-        // --- Função para Cancelamento (Mantida sem alterações na integração) ---
+        // --- Função para Cancelamento ---
         async function cancelAppointment(id) {
-            // Utilizamos uma modal customizada em vez de alert/confirm
-            // Para manter a estrutura simples, vou usar o comportamento original com uma nota
-            // IDEALMENTE: Substituir por uma modal de confirmação em HTML/CSS
-            if (!confirm("Tem certeza que deseja CANCELAR este agendamento? O paciente será notificado.")) {
+            if (!confirm("Tem certeza que deseja CANCELAR este agendamento? O paciente será notificado e receberá o link para reagendamento.")) {
                 return;
             }
 
             const cardElement = document.querySelector(`.appointment-card[data-id="${id}"]`);
             if (cardElement) {
                 const statusBadge = cardElement.querySelector('.status-badge');
-                // Altera temporariamente o status visualmente
                 statusBadge.innerText = 'CANCELANDO...';
                 cardElement.style.opacity = 0.5;
             }
@@ -451,16 +574,14 @@
             try {
                 const response = await fetch('/api/cancelar', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id }),
                 });
 
                 const result = await response.json();
 
                 if (response.ok && result.ok) {
-                    alert('✅ Agendamento cancelado com sucesso! O paciente foi notificado via WhatsApp.');
+                    alert('✅ Agendamento cancelado! Link de reagendamento enviado ao paciente.');
                     loadAppointments(currentFilterType);
                 } else {
                     alert(`❌ Falha ao cancelar: ${result.error || 'Erro desconhecido'}`);
@@ -475,28 +596,17 @@
             }
         }
 
-
         // --- Funções de Renderização e Lógica Principal ---
-
         let currentFilterType = 'today';
 
-        // Função para atualizar o cabeçalho e destacar o botão de filtro
         function updateHeader(filterType, filterDate = null) {
             currentFilterType = filterType;
-
-            // Remove o destaque de todos os botões de navegação
-            document.querySelectorAll('.date-navigation button').forEach(btn => btn.style.opacity = 1.0);
             document.querySelectorAll('.date-navigation button').forEach(btn => btn.removeAttribute('style'));
-
             let activeBtn = null;
 
             if (filterType === 'day' && filterDate) {
                 DETALHES_DIA_HEADER.innerText = `Detalhes do Dia: ${formatDisplayDate(filterDate)}`;
-                if (filterDate === getTodayISODate()) {
-                    activeBtn = document.querySelector('.btn-hoje');
-                } else {
-                    // Nenhum dos botões Mês/Semana/Hoje está ativo se for uma data específica
-                }
+                if (filterDate === getTodayISODate()) activeBtn = document.querySelector('.btn-hoje');
             } else if (filterType === 'week') {
                 DETALHES_DIA_HEADER.innerText = `Agendamentos da Semana Atual`;
                 activeBtn = document.querySelector('.btn-semana');
@@ -507,29 +617,23 @@
                 DETALHES_DIA_HEADER.innerText = `Detalhes do Dia: Filtro de Data Desativado`;
             }
 
-            // Aplica o destaque ao botão ativo
             if (activeBtn) {
-                // Remove o estilo para forçar o CSS a usar a regra de background-color para o ativo
                 activeBtn.style.backgroundColor = 'var(--color-primary)';
                 activeBtn.style.color = 'white';
                 activeBtn.style.borderColor = 'var(--color-primary)';
             }
         }
 
-        // Função principal para carregar os dados e renderizar os cards
         async function loadAppointments(filterType = 'day') {
             let filterDate = FILTER_DATE_INPUT.value;
             let dateRange = null;
-
             const TODAY_DATE = new Date();
             TODAY_DATE.setHours(0, 0, 0, 0);
-
             const NOW = new Date();
 
             LOADING_STATUS.innerText = 'Buscando agendamentos...';
             CARDS_CONTAINER.innerHTML = '';
 
-            // 1. Define o intervalo de data e a visualização do filtro
             if (filterType === 'today') {
                 filterDate = getTodayISODate();
                 FILTER_DATE_INPUT.value = filterDate;
@@ -549,25 +653,64 @@
             }
 
             try {
-                // 2. Chama a rota que puxa dados do Google Sheets
+                // Se a requisição à API falhar, isso pode causar o problema. 
+                // Verifique se a rota '/api/agendamentos-planilha' está funcionando no seu servidor.
                 const response = await fetch('/api/agendamentos-planilha');
                 const data = await response.json();
 
                 LOADING_STATUS.innerText = '';
 
                 if (data.error) {
-                    LOADING_STATUS.innerText = `Erro: ${data.error}. Verifique a autenticação e o console.`;
+                    LOADING_STATUS.innerText = `Erro: ${data.error}`;
                     return;
                 }
 
-                // 3. Filtragem dos Dados
                 let filteredData = data;
+                // 48 horas em milissegundos
+                const twoDaysInMs = 48 * 60 * 60 * 1000;
+                // Mantém APENAS agendamentos futuros OU agendamentos que ocorreram há menos de 48 horas.
+                filteredData = filteredData.filter(item => {
+                    if (!item.data || !item.horario) return true; // Mantém itens sem data para inspeção
 
+                    try {
+                        const [day, month, year] = item.data.split('/');
+                        const [hour, minute] = item.horario.split(':');
+                        const appointmentDateTime = new Date(year, month - 1, day, hour, minute);
+
+                        const timeDifference = NOW.getTime() - appointmentDateTime.getTime();
+
+                        return timeDifference < twoDaysInMs;
+
+                    } catch (e) {
+                        console.warn("Erro ao processar data para filtro de antiguidade:", item.data, item.horario, e);
+                        return true; // Mantém em caso de erro de data para evitar descarte
+                    }
+                });
+
+                // O código corrigido para a filtragem de DIA deve ficar assim:
                 if (filterType === 'day') {
-                    const [year, month, day] = filterDate.split('-');
-                    const formattedFilterDate = `${day}/${month}/${year}`;
-                    filteredData = data.filter(item => item.data === formattedFilterDate);
+
+                    // 1. Converte a data do input (YYYY-MM-DD) para objeto Date e zera o tempo
+                    const filterDateObj = new Date(filterDate.replace(/-/g, '/'));
+                    filterDateObj.setHours(0, 0, 0, 0);
+
+                    // ATUALIZA O CABEÇALHO DO MÊS PARA O MÊS SELECIONADO
+                    MES_ATUAL_HEADER.innerText = filterDateObj.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+
+                    filteredData = data.filter(item => {
+                        // 2. Converte a data do item (DD/MM/YYYY) para objeto Date usando a função parseDate
+                        const itemDateObj = parseDate(item.data);
+
+                        if (!itemDateObj) return false;
+
+                        // 3. Compara as datas (apenas ano, mês e dia)
+                        return itemDateObj.getTime() === filterDateObj.getTime();
+                    });
+
                 } else if (dateRange) {
+                    // ATUALIZA O CABEÇALHO DO MÊS PARA O MÊS ATUAL DO SISTEMA (para os botões Mês/Semana)
+                    MES_ATUAL_HEADER.innerText = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+
                     filteredData = data.filter(item => {
                         const itemDate = parseDate(item.data);
                         if (!itemDate) return false;
@@ -575,29 +718,36 @@
                     });
                 }
 
-                // 4. Atualiza o cabeçalho e verifica se há dados
+                // Aqui você define o mês correto se estiver no modo Mês
+                if (filterType === 'month') {
+                    MES_ATUAL_HEADER.innerText = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+                }
+
+
                 updateHeader(filterType, filterDate);
 
                 if (filteredData.length === 0) {
-                    LOADING_STATUS.innerText = `Nenhum agendamento encontrado para o período selecionado.`;
+                    LOADING_STATUS.innerText = `Nenhum agendamento encontrado.`;
                     return;
                 }
 
-                // 5. Ordena por data e horário
+                // AJUSTE DA ORDENAÇÃO: Ordenar por data/hora decrescente (mais recente primeiro)
                 filteredData.sort((a, b) => {
-                    const dateA = parseDate(a.data);
-                    const dateB = parseDate(b.data);
-                    if (dateA > dateB) return 1;
-                    if (dateA < dateB) return -1;
-                    return (a.horario > b.horario) ? 1 : -1;
+                    const getTimestamp = (item) => {
+                        if (!item.data || !item.horario) return 0;
+                        const [day, month, year] = item.data.split('/');
+                        const [hour, minute] = item.horario.split(':');
+                        return new Date(year, month - 1, day, hour, minute).getTime();
+                    };
+
+                    const timestampA = getTimestamp(a);
+                    const timestampB = getTimestamp(b);
+
+                    return timestampB - timestampA;
                 });
 
-
-                // 6. Renderizar os Cards
                 filteredData.forEach(item => {
                     const itemDate = parseDate(item.data);
-
-                    // Lógica de Agendamento Passado
                     let pastClass = '';
                     let isPast = false;
 
@@ -605,80 +755,84 @@
                         const [day, month, year] = item.data.split('/');
                         const [hour, minute] = item.horario.split(':');
                         const appointmentDateTime = new Date(year, month - 1, day, hour, minute);
-
                         if (appointmentDateTime < NOW) {
                             pastClass = 'past-appointment';
                             isPast = true;
                         }
                     }
 
-                    const statusLower = item.status ? item.status.toLowerCase() : 'pendente'; // Fallback
+                    const statusLower = item.status ? item.status.toLowerCase() : 'pendente';
                     const statusClass = `card-${statusLower}`;
-
-                    // Condição para exibir os botões de ação
                     const showActionButtons = !isPast && (statusLower === 'pendente' || statusLower === 'confirmado');
-
-                    // Tratamento do Telefone para Link do WhatsApp
                     const cleanPhone = item.telefone ? item.telefone.replace(/\D/g, '') : '';
-                    const whatsappLink = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#'; // Adicionado 55 para DDI Brasil
+                    const whatsappLink = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#';
 
-                    // Para simular o layout pretendido, incluímos Confirmar e Reagendar.
-                    // ATENÇÃO: Estes botões não têm funcionalidade real nesta versão (apenas o Cancelar tem a chamada API que você forneceu).
+                    // --- HTML dos Botões ---
                     const actionButtons = showActionButtons ? `
-                        <button class="btn-confirmar">Confirmar</button>
-                        <button class="btn-reagendar">Reagendar</button>
-                        <button class="btn-cancelar" onclick="cancelAppointment('${item.id}')">
-                            Cancelar Agendamento
-                        </button>
-                    ` : '';
-
+                    <button class="btn-cancelar" onclick="cancelAppointment('${item.id}')">
+                        Cancelar Agendamento
+                    </button>
+                ` : '';
+                    // -----------------------
 
                     const cardHTML = `
-                    <div class="appointment-card ${statusClass} ${pastClass}" data-id="${item.id}">
-                        <div class="card-header">
-                            <span class="horario-nome">
-                                ${item.horario} - ${item.nome}
-                            </span>
-                            <span class="status-badge status-${statusLower}">
-                                ${item.status ? item.status.toUpperCase() : 'PENDENTE'}
-                            </span>
-                        </div>
-                        <div class="card-details">
-                            ${filterType !== 'day' ? `📅 Data: ${item.data}<br>` : ''}
-                            📲 Telefone: <a href="${whatsappLink}" target="_blank">${item.telefone || 'N/A'}</a><br>
-                            📧 Email: ${item.email || 'N/A'}
-                        </div>
-                        ${showActionButtons ? `
-                        <div class="card-actions">
-                            ${actionButtons}
-                        </div>
-                        ` : ''}
+                <div class="appointment-card ${statusClass} ${pastClass}" data-id="${item.id}">
+                    <div class="card-header">
+                        <span class="horario-nome">
+                            ${item.horario} - ${item.nome}
+                        </span>
+                        <span class="status-badge status-${statusLower}">
+                            ${item.status ? item.status.toUpperCase() : 'PENDENTE'}
+                        </span>
                     </div>
-                    `;
+                    <div class="card-details">
+                        ${filterType !== 'day' ? `📅 Data: ${item.data}<br>` : ''}
+                        
+                        🦷 Procedimento: ${item.procedimento || 'N/A'}<br>
+                        
+                        📲 Telefone: <a href="${whatsappLink}" target="_blank">${item.telefone || 'N/A'}</a><br>
+                        📧 Email: ${item.email || 'N/A'}
+                    </div>
+                    ${showActionButtons ? `
+                    <div class="card-actions">
+                        ${actionButtons}
+                    </div>
+                    ` : ''}
+                </div>
+                `;
                     CARDS_CONTAINER.innerHTML += cardHTML;
                 });
 
             } catch (error) {
                 console.error('Erro ao carregar o dashboard:', error);
-                LOADING_STATUS.innerText = '❌ Erro de comunicação com o servidor. Verifique o console.';
+                LOADING_STATUS.innerText = '❌ Erro de comunicação com o servidor.';
             }
         }
 
+        // --- Funções de Polling do WhatsApp Status ---
+        function updateWhatsAppUI(status) {
+            // Implementação da função updateWhatsAppUI (deve ser inserida aqui)
+        }
 
-        // --- Event Listeners dos Botões de Filtro ---
+        async function checkWhatsAppStatus() {
+            // Implementação da função checkWhatsAppStatus (deve ser inserida aqui)
+        }
 
-        // Filtro por Data (input)
+        // --- Event Listeners e Inicialização ---
         FILTER_DATE_INPUT.addEventListener('change', () => loadAppointments('day'));
 
-        // Botão ATUALIZAR (agora com ID e estilo unificado, e chama a função diretamente no HTML)
-        // BTN_ATUALIZAR.addEventListener('click', () => loadAppointments('day')); // Removido para evitar duplicidade com onclick no HTML
-
-        // Botões de navegação (chama a função diretamente no HTML com onclick)
-
-        // Carrega os agendamentos de 'hoje' ao iniciar
         document.addEventListener('DOMContentLoaded', () => {
+            // Esta linha preenche o H2 com o Mês/Ano atual (ex: "Novembro de 2025")
+            MES_ATUAL_HEADER.innerText = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+
             loadAppointments('today');
+
+            // Chamadas do status do WhatsApp (Descomente e implemente quando o backend estiver pronto)
+            // updateWhatsAppUI('loading');
+            // checkWhatsAppStatus();
+            // setInterval(checkWhatsAppStatus, POLLING_INTERVAL);
         });
+
     </script>
 </body>
 
