@@ -111,7 +111,7 @@ async function authenticateFirebaseToken(req, res, next) {
     return res.status(401).json({ message: 'Sessão inválida ou expirada. Faça login novamente.' });
   }
 }
-// ----------------------------------------------------
+
 
 // ENV
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -241,6 +241,7 @@ transporter.verify().then(() => console.log('✅ Nodemailer ready')).catch(err =
 // ---------------------
 
 // --- NOVO: Variáveis de Estado do WhatsApp ---
+let isWhatsAppConnected = false;
 let waStatus = 'loading'; // Estados: 'loading', 'qr_code', 'connected', 'disconnected', 'error'
 let waQrCodeBase64 = null; // Armazena a string Base64 do QR Code
 let clientReady = false; // Mantido para compatibilidade com o código original
@@ -267,10 +268,10 @@ waClient.on('qr', async qr => {
 });
 
 waClient.on('ready', () => {
-  waStatus = 'connected'; // Atualiza o status
+  waStatus = 'connected'; // ⬅️ ISSO é o que faz o endpoint retornar TRUE
   clientReady = true;
   waQrCodeBase64 = null; // Limpa o QR após conexão
-  console.log('🟢 WhatsApp client ready');
+  console.log('✅ WhatsApp Client está pronto e conectado! waStatus = connected');
 });
 
 waClient.on('authenticated', () => {
@@ -605,6 +606,21 @@ app.get('/api/whatsapp/status', (req, res) => {
   res.json(responseData);
 });
 // ---------------------------
+
+// ------------------------------------------------------------------
+// 🚀 NOVO ENDPOINT: Verificação de PRONTIDÃO para Agendamento
+// Este endpoint é consumido pelo formulário de agendamento (frontend)
+// ------------------------------------------------------------------
+app.get('/api/agendamento/status-whatsapp', (req, res) => {
+  // O status 'connected' é o único que permite o agendamento prosseguir.
+  const isReadyForBooking = waStatus === 'connected';
+
+  res.json({
+    isReady: isReadyForBooking,
+    status: waStatus // Incluir o status ajuda no debugging no frontend
+  });
+});
+// ------------------------------------------------------------------
 
 // ---------------------------
 // API: disponibilidade (usa Calendar) - bloqueia apenas CONFIRMADOS

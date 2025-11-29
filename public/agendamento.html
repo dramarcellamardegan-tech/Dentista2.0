@@ -43,7 +43,10 @@
             <h1 class="text-3xl font-extrabold text-gray-800">Agendamento de Avaliação</h1>
             <p class="text-sm text-gray-500 mt-1">Ortodontia, Dentística e Harmonização Orofacial</p>
         </header>
-
+        <div id="statusMessageArea"
+            class="mt-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-lg" role="alert">
+            <p id="statusMessage" class="font-medium">Verificando status de conexão...</p>
+        </div>
         <form id="agendamentoForm" class="space-y-4">
             <div id="step-info" class="space-y-4">
                 <h2 class="text-xl font-semibold text-cyan-700 border-b pb-2 mb-4">Seus Dados</h2>
@@ -80,9 +83,10 @@
                     </select>
                 </div>
                 <div class="pt-4">
-                    <button type="button" id="next-to-date-btn"
-                        class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg">Próximo:
-                        Escolher Data</button>
+                    <button type="button" id="next-to-date-btn" disabled
+                        class="w-full bg-cyan-600 opacity-50 text-white font-bold py-3 px-4 rounded-lg shadow-lg">
+                        Aguardando Status do Sistema...
+                    </button>
                 </div>
             </div>
 
@@ -141,10 +145,81 @@
     </div>
 
     <script>
+        let apiBaseUrl = "http://localhost:4000/api";
+        const API_CHECK_ENDPOINT = `${apiBaseUrl}/agendamento/status-whatsapp`;
+        const API_CHECK_INTERVAL = 5000;
+
+        // ==========================================================
+        // ELEMENTOS
+        // ==========================================================
+        const nextToDateButton = document.getElementById("next-to-date-btn");
+        const submitButton = document.getElementById("submit-btn");
+        const statusMessage = document.getElementById("statusMessage");
+
+        const dateSelection = document.getElementById("dateSelection");
+        const timeSelection = document.getElementById("timeSelection");
+
+        const datesContainer = document.getElementById("datesContainer");
+        const timeContainer = document.getElementById("timeContainer");
+
+        // ==========================================================
+        // POLLING WHATSAPP (CORRIGIDO)
+        // ==========================================================
+        async function checkWhatsappConnection() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/agendamento/status-whatsapp`);
+                const data = await response.json();
+
+                if (data.isReady === true) {
+                    nextToDateButton.disabled = false;
+                    nextToDateButton.textContent = "Próximo: Escolher Data";
+                    nextToDateButton.classList.remove("opacity-50");
+
+                    submitButton.disabled = false;
+                    submitButton.classList.remove("opacity-50");
+
+                    document.getElementById("statusMessageArea").style.display = "none";
+                    return;
+                }
+
+                nextToDateButton.disabled = true;
+                nextToDateButton.textContent = "Aguardando Conexão WhatsApp...";
+                nextToDateButton.classList.add("opacity-50");
+
+                submitButton.disabled = true;
+
+                statusMessage.textContent =
+                    data.status === "qr_code"
+                        ? "⚠️ Aguardando escanear o QR Code."
+                        : "O sistema de confirmação está inicializando...";
+
+                setTimeout(checkWhatsappConnection, API_CHECK_INTERVAL);
+
+            } catch (error) {
+                console.error("Erro no Polling:", error);
+
+                nextToDateButton.disabled = true;
+                nextToDateButton.textContent = "Erro ao se comunicar com o servidor.";
+                nextToDateButton.classList.add("opacity-50");
+
+                statusMessage.textContent = "Erro ao se comunicar com o servidor.";
+
+                setTimeout(checkWhatsappConnection, API_CHECK_INTERVAL);
+            }
+        }
+
+        checkWhatsappConnection();
+
+        // ==========================================================
+        // NAVEGAÇÃO PARA DATA
+        // ==========================================================
+        nextToDateButton.addEventListener("click", () => {
+            dateSelection.classList.remove("hidden");
+            generateDates();
+        });
         // Variáveis de estado
         let currentDate = new Date();
         let selectedDate = null;
-        let apiBaseUrl = '/api'; // Certifique-se que o PORT=4000 no .env está ativo
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
         // ==========================================================
@@ -187,6 +262,7 @@
                 showMessage('O Email não é válido. Verifique o formato.', 'error');
                 return; // <--- IMPEDE O AVANÇO AQUI
             }
+
 
             // 3. Se tudo estiver certo, avança
             goToStep('date');
@@ -368,8 +444,19 @@
 
             // Habilita botão de submissão
             const submitBtn = document.getElementById('submit-btn');
-            submitBtn.disabled = false;
+
+            // ✅ CORREÇÃO: Não mexemos no atributo disabled, apenas na opacidade.
+            // O status "disabled" agora é controlado apenas pela checagem de conexão do WhatsApp.
             submitBtn.classList.remove('opacity-50');
+
+            // 💡 Melhoria: Atualize o texto para dar feedback, caso esteja desabilitado
+            if (submitBtn.disabled) {
+                submitBtn.textContent = 'Aguardando Conexão WhatsApp...';
+                // A função checkWhatsappConnection irá reverter o texto e habilitar o botão
+                // quando a conexão for restabelecida e o polling rodar.
+            } else {
+                submitBtn.textContent = 'Confirmar Agendamento';
+            }
         }
 
         // ==========================================================
