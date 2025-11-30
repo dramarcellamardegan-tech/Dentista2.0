@@ -122,7 +122,7 @@ const transporter = nodemailer.createTransport({
   },
   tls: { rejectUnauthorized: false },
 });
-transporter.verify().then(()=>console.log('✅ Nodemailer ready')).catch(err=>console.warn('⚠️ Nodemailer verify failed:', err?.message||err));
+transporter.verify().then(() => console.log('✅ Nodemailer ready')).catch(err => console.warn('⚠️ Nodemailer verify failed:', err?.message || err));
 
 // ---------- WHATSAPP CLIENT SETUP (Koyeb-ready) ----------
 let waStatus = 'loading'; // 'loading'|'qr_code'|'connected'|'disconnected'|'error'
@@ -130,15 +130,15 @@ let waQrCodeBase64 = null;
 let clientReady = false;
 
 const waClient = new Client({
-  authStrategy: new LocalAuth({ clientId: 'dentista-ia', dataPath: '/data/session' }), // persist in /data
+  authStrategy: new LocalAuth({
+    clientId: 'dentista-ia',
+    dataPath: './session' // PASTA CORRETA PARA KOYEB
+  }),
   puppeteer: {
     headless: true,
-    // executablePath is optional but recommended if environment provides chrome; Koyeb's image includes chromium path
-    executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
-    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-software-rasterizer']
+    args: ['--no-sandbox']
   },
-  takeoverOnConflict: true,
-  puppeteerOptions: {} // keep for compatibility
+  takeoverOnConflict: true
 });
 
 // Clean any old session on cold start (optional, careful)
@@ -146,9 +146,9 @@ try {
   const authPath = path.join(__dirname, '.wwebjs_auth');
   if (fs.existsSync(authPath)) {
     console.log('🧹 Limpando .wwebjs_auth local (se existir)...');
-    try { fs.rmSync(authPath, { recursive: true, force: true }); } catch(e){/*ignore*/}
+    try { fs.rmSync(authPath, { recursive: true, force: true }); } catch (e) {/*ignore*/ }
   }
-} catch(e){console.warn('Falha cleanup:', e)}
+} catch (e) { console.warn('Falha cleanup:', e) }
 
 // WhatsApp handlers
 waClient.on('qr', async qr => {
@@ -170,10 +170,10 @@ waClient.on('ready', () => {
 });
 
 waClient.on('authenticated', () => console.log('✅ WhatsApp authenticated'));
-waClient.on('auth_failure', e => { waStatus='error'; console.error('❌ WhatsApp auth_failure', e); });
-waClient.on('disconnected', reason => { waStatus='disconnected'; clientReady=false; console.log('🔴 WhatsApp disconnected:', reason); setTimeout(()=>waClient.initialize(), 3000); });
+waClient.on('auth_failure', e => { waStatus = 'error'; console.error('❌ WhatsApp auth_failure', e); });
+waClient.on('disconnected', reason => { waStatus = 'disconnected'; clientReady = false; console.log('🔴 WhatsApp disconnected:', reason); setTimeout(() => waClient.initialize(), 3000); });
 
-waClient.initialize().catch(e=>console.error('Erro inicializando cliente WhatsApp:', e));
+waClient.initialize().catch(e => console.error('Erro inicializando cliente WhatsApp:', e));
 
 // ---------- HELPERS ----------
 function normalizePhone(n) {
@@ -230,8 +230,8 @@ async function createCalendarEvent(nome, telefone, dataDDMMYYYY, horario) {
     const clientAuth = await auth.getClient();
     const calendar = google.calendar({ version: 'v3', auth: clientAuth });
     const [dia, mes, ano] = String(dataDDMMYYYY).split('/');
-    const startISO = new Date(`${ano}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}T${horario}:00`).toISOString();
-    const endISO = new Date(new Date(startISO).getTime() + DURACAO_CONSULTA_MIN*60000).toISOString();
+    const startISO = new Date(`${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${horario}:00`).toISOString();
+    const endISO = new Date(new Date(startISO).getTime() + DURACAO_CONSULTA_MIN * 60000).toISOString();
     const event = { summary: `[CONFIRMADO] Avaliação - ${nome}`, description: `Agendamento via bot. Telefone: ${telefone}`, start: { dateTime: startISO, timeZone: TIMEZONE }, end: { dateTime: endISO, timeZone: TIMEZONE }, colorId: 2 };
     const resp = await calendar.events.insert({ calendarId: CALENDAR_ID, resource: event });
     console.log('✅ Calendar event created:', resp.data.id);
@@ -287,7 +287,7 @@ async function buscarAgendamentoPendente(telefone) {
       const status = String(row[6] || '').toLowerCase();
       const telefonePlanilha = normalizePhone(row[2] || '');
       if (status === 'pendente' && telefonePlanilha === telefoneLimpo) {
-        return { nome: row[1], telefone: telefonePlanilha, data: row[4], horario: row[5], calendarId: row[8], linha: i+1, email: row[3] };
+        return { nome: row[1], telefone: telefonePlanilha, data: row[4], horario: row[5], calendarId: row[8], linha: i + 1, email: row[3] };
       }
     }
     return null;
@@ -303,7 +303,7 @@ async function buscarAgendamentoAtivo(telefone) {
       const status = String(row[6] || '').toLowerCase();
       const telefonePlanilha = normalizePhone(row[2] || '');
       if ((status === 'pendente' || status === 'confirmado') && telefonePlanilha === telefoneLimpo) {
-        return { nome: row[1], telefone: telefonePlanilha, data: row[4], horario: row[5], calendarId: row[8], linha: i+1, email: row[3], statusAtual: row[6] };
+        return { nome: row[1], telefone: telefonePlanilha, data: row[4], horario: row[5], calendarId: row[8], linha: i + 1, email: row[3], statusAtual: row[6] };
       }
     }
     return null;
@@ -314,7 +314,7 @@ async function buscarAgendamentoAtivo(telefone) {
 const conversationStates = {};
 function normalizeForIntent(text) {
   if (!text) return '';
-  return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+  return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 function detectIntentWhatsApp(text) {
   const n = normalizeForIntent(text);
@@ -364,9 +364,9 @@ waClient.on('message', async msg => {
     let agendamentoPendente = null;
     try { agendamentoPendente = await buscarAgendamentoPendente(senderPhone); } catch (e) { console.warn('buscarAgendamentoPendente error', e); }
 
-    const isAff = ['sim','s','claro','pode','confirmo'].includes(String(userMessage||'').toLowerCase().trim());
-    const isNeg = ['nao','não','n','depois','cancelar','cancela','agora não','agora nao'].includes(String(userMessage||'').toLowerCase().trim());
-    const userWantsToCancel = String(userMessage||'').toLowerCase().includes('cancelar');
+    const isAff = ['sim', 's', 'claro', 'pode', 'confirmo'].includes(String(userMessage || '').toLowerCase().trim());
+    const isNeg = ['nao', 'não', 'n', 'depois', 'cancelar', 'cancela', 'agora não', 'agora nao'].includes(String(userMessage || '').toLowerCase().trim());
+    const userWantsToCancel = String(userMessage || '').toLowerCase().includes('cancelar');
 
     // 1) Confirm pending
     if (agendamentoPendente) {
@@ -379,7 +379,7 @@ waClient.on('message', async msg => {
           const msgDentistaConfirmado = `🟢 AGENDAMENTO CONFIRMADO:\nPaciente: ${nome}\nTelefone: ${telefone}\nData: ${data}\nHorário: ${horario}`;
           if (DENTIST_PHONE) await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentistaConfirmado);
           await msg.reply(`🎉 *AGENDAMENTO CONFIRMADO!* 🎉\n\nQue ótimo, ${nome}! Seu horário para *${data}* às *${horario}* está CONFIRMADO na agenda da Dra. Marcella.`);
-          try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) { await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🟢 AGENDAMENTO CONFIRMADO', text: msgDentistaConfirmado }); if (email) await transporter.sendMail({ from: process.env.EMAIL_USER, to: email, subject: '✅ Confirmação de Agendamento', text: `Seu agendamento em ${data} às ${horario} foi CONFIRMADO.` }); } } catch (mailErr) { console.warn('Falha envio e-mail confirmação:', mailErr?.message||mailErr); }
+          try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) { await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🟢 AGENDAMENTO CONFIRMADO', text: msgDentistaConfirmado }); if (email) await transporter.sendMail({ from: process.env.EMAIL_USER, to: email, subject: '✅ Confirmação de Agendamento', text: `Seu agendamento em ${data} às ${horario} foi CONFIRMADO.` }); } } catch (mailErr) { console.warn('Falha envio e-mail confirmação:', mailErr?.message || mailErr); }
         } catch (e) { console.error('Erro ao confirmar agendamento:', e); await msg.reply('❌ Ocorreu um erro ao confirmar seu agendamento. Tente novamente mais tarde.'); }
         delete conversationStates[senderPhone];
         return;
@@ -388,7 +388,7 @@ waClient.on('message', async msg => {
         const msgDentistaCancelado = `🔴 AGENDAMENTO CANCELADO (pendente):\nPaciente: ${nome}\nTelefone: ${telefone}\nData: ${data}\nHorário: ${horario}`;
         if (DENTIST_PHONE) await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentistaCancelado);
         await msg.reply(`Ok ${nome}, seu agendamento em ${data} às ${horario} foi CANCELADO.`);
-        try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🔴 AGENDAMENTO CANCELADO', text: msgDentistaCancelado }); } catch (mailErr) { console.warn('Falha envio email cancelamento:', mailErr?.message||mailErr); }
+        try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🔴 AGENDAMENTO CANCELADO', text: msgDentistaCancelado }); } catch (mailErr) { console.warn('Falha envio email cancelamento:', mailErr?.message || mailErr); }
         delete conversationStates[senderPhone];
         return;
       }
@@ -405,7 +405,7 @@ waClient.on('message', async msg => {
           const msgDentistaCancelado = `🔴 AGENDAMENTO CANCELADO:\nPaciente: ${nome}\nTelefone: ${senderPhone}\nData: ${data}\nHorário: ${horario}`;
           if (DENTIST_PHONE) await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentistaCancelado);
           await msg.reply(`✅ Seu agendamento em ${data} às ${horario} foi CANCELADO com sucesso. Para reagendar, envie AGENDAR.`);
-          try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🔴 AGENDAMENTO CANCELADO', text: msgDentistaCancelado }); } catch (mailErr) { console.warn('Falha email cancelamento:', mailErr?.message||mailErr); }
+          try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: '🔴 AGENDAMENTO CANCELADO', text: msgDentistaCancelado }); } catch (mailErr) { console.warn('Falha email cancelamento:', mailErr?.message || mailErr); }
         } catch (e) { console.error('Erro no cancelamento ativo:', e); await msg.reply('❌ Falha no cancelamento. Tente novamente mais tarde.'); }
         delete conversationStates[senderPhone];
         return;
@@ -484,7 +484,7 @@ app.get('/api/disponibilidade', async (req, res) => {
     const calendar = google.calendar({ version: 'v3', auth: clientAuth });
     const dateStart = new Date(ano, mes - 1, dia);
     const dateEnd = new Date(ano, mes - 1, dia);
-    dateEnd.setHours(23,59,59,999);
+    dateEnd.setHours(23, 59, 59, 999);
     const calendarResponse = await calendar.events.list({ calendarId: CALENDAR_ID, timeMin: dateStart.toISOString(), timeMax: dateEnd.toISOString(), singleEvents: true, orderBy: 'startTime' });
     const busy = new Set();
     (calendarResponse.data.items || []).forEach(ev => {
@@ -493,7 +493,7 @@ app.get('/api/disponibilidade', async (req, res) => {
         const end = new Date(ev.end.dateTime);
         let cur = new Date(start);
         while (cur.getTime() < end.getTime()) {
-          busy.add(`${String(cur.getHours()).padStart(2,'0')}:${String(cur.getMinutes()).padStart(2,'0')}`);
+          busy.add(`${String(cur.getHours()).padStart(2, '0')}:${String(cur.getMinutes()).padStart(2, '0')}`);
           cur.setMinutes(cur.getMinutes() + DURACAO_CONSULTA_MIN);
         }
       }
@@ -517,7 +517,7 @@ app.post('/api/agendar', async (req, res) => {
     const msgDentista = `🟡 NOVO AGENDAMENTO PENDENTE\nPaciente: ${nome}\nTelefone: ${telefone}\nData: ${data_agendamento}\nHorário: ${horario}`;
     await enviarMensagemWhatsApp(telefone, msgCliente);
     if (DENTIST_PHONE) await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentista);
-    try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) { await transporter.sendMail({ from: process.env.EMAIL_USER, to: email, subject: 'Pré-Confirmação de Agendamento', text: msgCliente }); await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: 'Novo Agendamento Pendente', text: msgDentista }); } } catch (mailErr) { console.warn('Falha envio e-mails (não crítico):', mailErr?.message||mailErr); }
+    try { if (process.env.EMAIL_USER && process.env.EMAIL_PASS) { await transporter.sendMail({ from: process.env.EMAIL_USER, to: email, subject: 'Pré-Confirmação de Agendamento', text: msgCliente }); await transporter.sendMail({ from: process.env.EMAIL_USER, to: DENTIST_EMAIL, subject: 'Novo Agendamento Pendente', text: msgDentista }); } } catch (mailErr) { console.warn('Falha envio e-mails (não crítico):', mailErr?.message || mailErr); }
     console.log(`✅ Agendamento PENDENTE criado: ${nome} - linha ${linha || 'desconhecida'}`);
     return res.json({ ok: true, id, linha });
   } catch (e) { console.error('/api/agendar error', e?.message || e); return res.status(500).json({ ok: false, error: 'Falha ao agendar' }); }
@@ -533,20 +533,20 @@ app.post('/api/cancelar', async (req, res) => {
     let linha = null; let agendamentoData = null;
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === id) {
-        linha = i+1;
+        linha = i + 1;
         agendamentoData = { id: rows[i][0], nome: rows[i][1], telefone: rows[i][2], data: rows[i][4], horario: rows[i][5], calendarId: rows[i][8], statusAtual: rows[i][6] };
         break;
       }
     }
-    if (!linha) return res.status(404).json({ ok:false, error: 'Agendamento não encontrado na planilha.' });
-    if (agendamentoData.statusAtual && agendamentoData.statusAtual.toLowerCase() === 'cancelado') return res.json({ ok:true, message: 'Agendamento já estava Cancelado.' });
+    if (!linha) return res.status(404).json({ ok: false, error: 'Agendamento não encontrado na planilha.' });
+    if (agendamentoData.statusAtual && agendamentoData.statusAtual.toLowerCase() === 'cancelado') return res.json({ ok: true, message: 'Agendamento já estava Cancelado.' });
     await updateCell(`${SHEET_NAME}!G${linha}`, [['Cancelado']]);
     if (agendamentoData.calendarId) { await deleteCalendarEvent(agendamentoData.calendarId); await updateCell(`${SHEET_NAME}!I${linha}`, [['']]); }
     const msgClienteCancelado = `⚠️ *CANCELAMENTO EFETUADO* ⚠️\n\nOlá ${agendamentoData.nome}, o seu agendamento para ${agendamentoData.data} às ${agendamentoData.horario} foi **CANCELADO** pela clínica.`;
     await enviarMensagemWhatsApp(agendamentoData.telefone, msgClienteCancelado);
     console.log(`❌ Agendamento Cancelado pelo Dentista: ${agendamentoData.nome}`);
-    return res.json({ ok:true, message: `Agendamento ${id} cancelado com sucesso.` });
-  } catch (e) { console.error('/api/cancelar error', e?.message || e); return res.status(500).json({ ok:false, error: 'Falha ao cancelar o agendamento via API' }); }
+    return res.json({ ok: true, message: `Agendamento ${id} cancelado com sucesso.` });
+  } catch (e) { console.error('/api/cancelar error', e?.message || e); return res.status(500).json({ ok: false, error: 'Falha ao cancelar o agendamento via API' }); }
 });
 
 // GET /api/agendamentos-planilha - return sheet rows to dashboard
@@ -558,7 +558,7 @@ app.get('/api/agendamentos-planilha', async (req, res) => {
     const rows = response.data.values;
     if (!rows || rows.length < 2) return res.json([]);
     const headers = rows[0].map(h => String(h).trim());
-    const agendamentos = rows.slice(1).map(row => { const obj = {}; headers.forEach((header,index) => { obj[header] = row[index] || ""; }); obj.data = obj.data_agendamento || obj.data || ""; return obj; });
+    const agendamentos = rows.slice(1).map(row => { const obj = {}; headers.forEach((header, index) => { obj[header] = row[index] || ""; }); obj.data = obj.data_agendamento || obj.data || ""; return obj; });
     res.json(agendamentos);
   } catch (error) { console.error('/api/agendamentos-planilha error', error?.message || error); res.status(500).json({ error: 'Erro ao acessar a planilha' }); }
 });
@@ -578,7 +578,7 @@ async function runRemindersJob() {
     if (rows.length < 2) return;
     const now = new Date();
     for (let i = 1; i < rows.length; i++) {
-      const row = rows[i]; const linha = i+1;
+      const row = rows[i]; const linha = i + 1;
       const id = row[0] || ''; const nome = row[1] || ''; const telefone = row[2] || ''; const email = row[3] || ''; const data_agendamento = row[4] || ''; const horario = row[5] || ''; const status = String(row[6] || '').toLowerCase();
       const procedimento = row[7] || 'sua avaliação';
       const calendarId = row[8] || '';
@@ -595,14 +595,14 @@ async function runRemindersJob() {
         const msgCliente24 = `🔔 Lembrete: Olá ${nome}, seu agendamento para *${procedimento}* é amanhã às ${horario}. Caso precise alterar ou cancelar, responda por aqui.`;
         await enviarMensagemWhatsApp(telefone, msgCliente24);
         if (DENTIST_PHONE) { const msgDentista24 = `🔔 Lembrete 24h: Paciente ${nome} (${procedimento}) - ${data_agendamento} ${horario}`; await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentista24); }
-        try { await updateCell(`${SHEET_NAME}!J${linha}`, [['1']]); await updateCell(`${SHEET_NAME}!K${linha}`, [['1']]); } catch (e) { console.warn('Falha ao marcar notificado 24h:', e?.message||e); }
+        try { await updateCell(`${SHEET_NAME}!J${linha}`, [['1']]); await updateCell(`${SHEET_NAME}!K${linha}`, [['1']]); } catch (e) { console.warn('Falha ao marcar notificado 24h:', e?.message || e); }
         console.log(`⏰ Lembrete 24h enviado para linha ${linha} (${nome})`);
       }
       if (Math.abs(diffMinutes - target2) <= TOLERANCE_MINUTES && notificado_cliente !== '2') {
         const msgCliente2 = `⏰ Lembrete: Olá ${nome}, seu agendamento para *${procedimento}* é HOJE às ${horario}. Estaremos te aguardando!`;
         await enviarMensagemWhatsApp(telefone, msgCliente2);
         if (DENTIST_PHONE) { const msgDentista2 = `⏰ Lembrete 2h: Paciente ${nome} (${procedimento}) - ${data_agendamento} ${horario}`; await enviarMensagemWhatsApp(DENTIST_PHONE, msgDentista2); }
-        try { await updateCell(`${SHEET_NAME}!J${linha}`, [['2']]); await updateCell(`${SHEET_NAME}!K${linha}`, [['2']]); } catch (e) { console.warn('Falha ao marcar notificado 2h:', e?.message||e); }
+        try { await updateCell(`${SHEET_NAME}!J${linha}`, [['2']]); await updateCell(`${SHEET_NAME}!K${linha}`, [['2']]); } catch (e) { console.warn('Falha ao marcar notificado 2h:', e?.message || e); }
         console.log(`⏰ Lembrete 2h enviado para linha ${linha} (${nome})`);
       }
     }
